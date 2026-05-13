@@ -28,13 +28,6 @@ class LiquidGlassNavBar extends StatelessWidget {
             color: Colors.white.withOpacity(0.08),
             width: 1,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.35),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ],
         ),
         child: NativeLiquidGlass(
           borderRadius: BorderRadius.circular(36),

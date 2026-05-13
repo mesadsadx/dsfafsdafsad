@@ -14,19 +14,14 @@ class NativeLiquidGlass extends StatelessWidget {
     this.fallbackColor = const Color(0xB8161B22),
   });
 
-  // iOS tint is slightly lighter/more transparent for a true frosted look
-  Color get _iosTint => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
-      ? const Color(0x22FFFFFF)
-      : fallbackColor;
-
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: borderRadius,
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-          color: _iosTint,
+          color: const Color(0x66000000),
           child: child,
         ),
       ),
