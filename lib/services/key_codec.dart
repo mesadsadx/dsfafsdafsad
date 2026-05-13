@@ -13,10 +13,22 @@ class KeyCodecException implements Exception {
 }
 
 class KeyCodec {
+  // Handles: whitespace, URL-safe chars, missing padding
+  static Uint8List _decodeRobust(String input) {
+    var s = input.replaceAll(RegExp(r'\s'), ''); // strip all whitespace
+    s = s.replaceAll('-', '+').replaceAll('_', '/'); // url-safe → standard
+    switch (s.length % 4) {
+      case 2: s += '=='; break;
+      case 3: s += '='; break;
+      default: break;
+    }
+    return base64Decode(s);
+  }
+
   static KeyDictionary decodeKey1(String base64String) {
     final Uint8List bytes;
     try {
-      bytes = base64Decode(base64String);
+      bytes = _decodeRobust(base64String);
     } on FormatException {
       throw const KeyCodecException('Key 1 is not valid Base64');
     }
@@ -42,7 +54,7 @@ class KeyCodec {
   ) {
     final Uint8List bytes;
     try {
-      bytes = base64Decode(base64String);
+      bytes = _decodeRobust(base64String);
     } on FormatException {
       throw const KeyCodecException('Key 2 is not valid Base64');
     }

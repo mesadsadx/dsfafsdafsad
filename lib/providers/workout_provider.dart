@@ -54,7 +54,7 @@ class WorkoutNotifier extends StateNotifier<AsyncValue<Workout?>> {
 
   Future<void> addExercise(Exercise exercise) async {
     final workout = state.valueOrNull;
-    final newExercises = [...(workout?.exercises ?? []), exercise];
+    final newExercises = <Exercise>[...(workout?.exercises ?? []), exercise];
     state = AsyncValue.data(Workout(date: _date, exercises: newExercises));
     await _service.addExercise(_uid, _date, exercise);
   }

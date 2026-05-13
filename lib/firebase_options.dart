@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -33,10 +30,7 @@ class DefaultFirebaseOptions {
           'you can reconfigure this by running the FlutterFire CLI again.',
         );
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -66,4 +60,25 @@ class DefaultFirebaseOptions {
     iosClientId: '479670225209-1sb64ua4vr3a0ajorqikrkv15g14j4tt.apps.googleusercontent.com',
     iosBundleId: 'com.personal.workoutTracker',
   );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyCRO_7B537AV26xPNK28-Jy11eewRtacYw',
+    appId: '1:479670225209:web:b9568df6641651605ec0e8',
+    messagingSenderId: '479670225209',
+    projectId: 'workout-69787',
+    authDomain: 'workout-69787.firebaseapp.com',
+    storageBucket: 'workout-69787.firebasestorage.app',
+    measurementId: 'G-2JENDJELVN',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyCRO_7B537AV26xPNK28-Jy11eewRtacYw',
+    appId: '1:479670225209:web:b005e556238e83735ec0e8',
+    messagingSenderId: '479670225209',
+    projectId: 'workout-69787',
+    authDomain: 'workout-69787.firebaseapp.com',
+    storageBucket: 'workout-69787.firebasestorage.app',
+    measurementId: 'G-NL55RSNE11',
+  );
+
 }

@@ -19,9 +19,12 @@ class SetRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final weightStr = weight == 0
+    final isBodyweight = weight == 0;
+    final isTimed = isBodyweight && reps >= 30;
+    final weightStr = isBodyweight
         ? 'Вес тела'
         : '${weight % 1 == 0 ? weight.toInt() : weight} кг';
+    final repsStr = isTimed ? '$reps сек.' : '$reps повт.';
 
     return GestureDetector(
       onTap: onTap,
@@ -60,7 +63,11 @@ class SetRow extends StatelessWidget {
                   decorationColor: AppColors.textMuted,
                   fontSize: 14,
                 ),
-                child: Text('$weightStr  ×  $reps повт.'),
+                child: Text(
+                  isBodyweight
+                      ? '$weightStr  ×  $repsStr'
+                      : '$weightStr  ×  $repsStr',
+                ),
               ),
             ),
             AnimatedContainer(
