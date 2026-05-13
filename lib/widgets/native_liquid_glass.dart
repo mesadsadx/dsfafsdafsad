@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 class NativeLiquidGlass extends StatelessWidget {
   final Widget child;
@@ -15,39 +14,21 @@ class NativeLiquidGlass extends StatelessWidget {
     this.fallbackColor = const Color(0xB8161B22),
   });
 
+  // iOS tint is slightly lighter/more transparent for a true frosted look
+  Color get _iosTint => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
+      ? const Color(0x22FFFFFF)
+      : fallbackColor;
+
   @override
   Widget build(BuildContext context) {
-    final useNative =
-        !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-
     return ClipRRect(
       borderRadius: borderRadius,
-      child: useNative ? _nativeStack() : _flutterBlur(),
-    );
-  }
-
-  Widget _nativeStack() {
-    return Stack(
-      fit: StackFit.passthrough,
-      children: [
-        Positioned.fill(
-          child: UiKitView(
-            viewType: 'liquid_glass_view',
-            layoutDirection: TextDirection.ltr,
-            creationParamsCodec: const StandardMessageCodec(),
-          ),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+        child: Container(
+          color: _iosTint,
+          child: child,
         ),
-        child,
-      ],
-    );
-  }
-
-  Widget _flutterBlur() {
-    return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-      child: Container(
-        color: fallbackColor,
-        child: child,
       ),
     );
   }

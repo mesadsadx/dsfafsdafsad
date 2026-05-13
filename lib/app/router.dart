@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
@@ -34,11 +35,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/today',
-            builder: (_, __) => const WorkoutScreen(),
+            pageBuilder: (_, __) => const NoTransitionPage(child: WorkoutScreen()),
           ),
           GoRoute(
             path: '/activity',
-            builder: (_, __) => const HeatmapScreen(),
+            pageBuilder: (_, __) => const NoTransitionPage(child: HeatmapScreen()),
           ),
           GoRoute(
             path: '/workout/:date',
