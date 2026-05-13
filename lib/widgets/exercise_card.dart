@@ -57,6 +57,17 @@ class ExerciseCard extends StatelessWidget {
             ),
         ],
       ),
+      foregroundDecoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: const Alignment(0, 0.25),
+          colors: [
+            Colors.white.withOpacity(0.04),
+            Colors.transparent,
+          ],
+        ),
+      ),
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,

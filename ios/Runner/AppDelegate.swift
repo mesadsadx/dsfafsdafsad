@@ -10,13 +10,19 @@ import UIKit
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
+  private var hapticEngine: HapticEngine?
+
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
-    guard let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "LiquidGlassPlugin") else {
-      return
+
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "LiquidGlassPlugin") {
+      let factory = LiquidGlassViewFactory(messenger: registrar.messenger())
+      registrar.register(factory, withId: "liquid_glass_view")
     }
-    let factory = LiquidGlassViewFactory(messenger: registrar.messenger())
-    registrar.register(factory, withId: "liquid_glass_view")
+
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "HapticEnginePlugin") {
+      hapticEngine = HapticEngine(messenger: registrar.messenger())
+    }
   }
 }
 

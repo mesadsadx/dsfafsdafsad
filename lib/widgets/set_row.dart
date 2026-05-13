@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app/theme.dart';
+import '../services/haptic_service.dart';
 
 class SetRow extends StatelessWidget {
   final int index;
@@ -27,7 +28,14 @@ class SetRow extends StatelessWidget {
     final repsStr = isTimed ? '$reps сек.' : '$reps повт.';
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        if (completed) {
+          HapticService.setUndo();
+        } else {
+          HapticService.setComplete();
+        }
+        onTap();
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),

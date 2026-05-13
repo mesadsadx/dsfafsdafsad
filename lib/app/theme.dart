@@ -1,5 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+class AppGradients {
+  // Very subtle top-green glow — barely noticeable, just kills the flatness
+  static const screenBackground = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment(0, 0.55),
+    colors: [Color(0xFF0E1C14), Color(0xFF0D1117)],
+  );
+
+  // Accent button gradient
+  static const accentButton = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF95D5B2), Color(0xFF52B788)],
+  );
+}
 
 class AppColors {
   static const background    = Color(0xFF0D1117);
@@ -36,10 +53,18 @@ ThemeData buildDarkTheme() {
         borderRadius: BorderRadius.all(Radius.circular(12)),
       ),
     ),
-    appBarTheme: const AppBarTheme(
+    appBarTheme: AppBarTheme(
       backgroundColor: AppColors.background,
       elevation: 0,
-      iconTheme: IconThemeData(color: AppColors.textSecondary),
+      scrolledUnderElevation: 0,
+      iconTheme: const IconThemeData(color: AppColors.textSecondary),
+      systemOverlayStyle: SystemUiOverlayStyle.light,
+      titleTextStyle: GoogleFonts.dmSans(
+        fontSize: 17,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textPrimary,
+        letterSpacing: -0.3,
+      ),
     ),
     textTheme: GoogleFonts.dmSansTextTheme(base.textTheme).apply(
       bodyColor: AppColors.textPrimary,

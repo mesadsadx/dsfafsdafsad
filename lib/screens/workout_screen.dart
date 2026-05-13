@@ -4,6 +4,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../app/theme.dart';
+import '../widgets/gradient_scaffold.dart';
 import '../models/exercise.dart';
 import '../providers/workout_provider.dart';
 import '../widgets/add_exercise_dialog.dart';
@@ -48,7 +49,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     final notifier = ref.read(workoutNotifierProvider(_dateStr).notifier);
     final bottomPad = MediaQuery.of(context).padding.bottom;
 
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(
         title: Text(_formatDate(_selectedDate)),
         leading: widget.date != null

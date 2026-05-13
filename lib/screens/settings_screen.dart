@@ -125,146 +125,234 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final dict = dictAsync.valueOrNull;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Настройки')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
         children: [
           _SectionLabel('Аккаунт'),
-          Card(
-            child: ListTile(
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              leading: CircleAvatar(
-                backgroundImage: user?.photoURL != null
-                    ? NetworkImage(user!.photoURL!)
-                    : null,
-                child: user?.photoURL == null
-                    ? const Icon(Icons.person)
-                    : null,
-              ),
-              title: Text(user?.displayName ?? ''),
-              subtitle: Text(user?.email ?? '',
-                  style: const TextStyle(color: AppColors.textSecondary)),
-              trailing: TextButton(
-                onPressed: () =>
-                    ref.read(authServiceProvider).signOut(),
-                child: const Text('Выйти',
-                    style: TextStyle(color: Colors.redAccent)),
+          _IOSGroup(children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundImage: user?.photoURL != null
+                        ? NetworkImage(user!.photoURL!)
+                        : null,
+                    backgroundColor: AppColors.surfaceVariant,
+                    child: user?.photoURL == null
+                        ? const Icon(Icons.person, color: AppColors.textSecondary)
+                        : null,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(user?.displayName ?? '',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w500, fontSize: 15)),
+                        Text(user?.email ?? '',
+                            style: const TextStyle(
+                                color: AppColors.textSecondary, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => ref.read(authServiceProvider).signOut(),
+                    child: const Text('Выйти',
+                        style: TextStyle(color: Colors.redAccent, fontSize: 14)),
+                  ),
+                ],
               ),
             ),
-          ),
+          ]),
           const Gap(28),
           _SectionLabel('Key 1 — Словарь упражнений'),
-          if (dict != null && !dict.isEmpty)
+          _IOSGroup(children: [
             Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                '✓ Загружено ${dict.entries.length} упражнений',
-                style:
-                    const TextStyle(color: AppColors.accent, fontSize: 13),
-              ),
-            )
-          else
-            const Padding(
-              padding: EdgeInsets.only(bottom: 8),
-              child: Text(
-                'Key 1 не настроен — вставьте строку ниже',
-                style: TextStyle(color: Colors.orange, fontSize: 13),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+              child: dict != null && !dict.isEmpty
+                  ? Row(children: [
+                      const Icon(Icons.check_circle_rounded,
+                          size: 14, color: AppColors.accent),
+                      const SizedBox(width: 6),
+                      Text('Загружено ${dict.entries.length} упражнений',
+                          style: const TextStyle(
+                              color: AppColors.accent, fontSize: 13)),
+                    ])
+                  : const Text('Key 1 не настроен',
+                      style: TextStyle(color: Colors.orange, fontSize: 13)),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+              child: TextField(
+                controller: _key1Ctrl,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Вставьте Base64 Key 1...',
+                  errorText: _key1Error,
+                  errorMaxLines: 3,
+                ),
               ),
             ),
-          TextField(
-            controller: _key1Ctrl,
-            maxLines: 3,
-            decoration: InputDecoration(
-              hintText: 'Вставьте Base64 Key 1...',
-              errorText: _key1Error,
-              errorMaxLines: 3,
-            ),
-          ),
-          const Gap(8),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed:
-                  _key1Ctrl.text.trim().isEmpty || _key1Saving
-                      ? null
-                      : _decodeAndSaveKey1,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                foregroundColor: Colors.black,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: _GradientButton(
+                onPressed: _key1Ctrl.text.trim().isEmpty || _key1Saving
+                    ? null
+                    : _decodeAndSaveKey1,
+                loading: _key1Saving,
+                label: 'Декодировать и сохранить',
               ),
-              child: _key1Saving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.black))
-                  : const Text('Декодировать и сохранить'),
             ),
-          ),
+          ]),
           const Gap(28),
           _SectionLabel('Key 2 — План на неделю'),
-          TextField(
-            controller: _key2Ctrl,
-            maxLines: 3,
-            decoration: InputDecoration(
-              hintText: 'Вставьте Base64 Key 2...',
-              errorText: _key2Error,
-              errorMaxLines: 3,
-            ),
-          ),
-          const Gap(8),
-          if (_key2Preview != null) ...[
-            _Key2Preview(workouts: _key2Preview!),
-            const Gap(10),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => setState(() => _key2Preview = null),
-                    style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.textSecondary),
-                    child: const Text('Отмена'),
-                  ),
+          _IOSGroup(children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+              child: TextField(
+                controller: _key2Ctrl,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Вставьте Base64 Key 2...',
+                  errorText: _key2Error,
+                  errorMaxLines: 3,
                 ),
-                const Gap(10),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _key2Saving ? null : _saveKey2,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: Colors.black,
-                    ),
-                    child: _key2Saving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.black))
-                        : const Text('Загрузить план'),
-                  ),
-                ),
-              ],
-            ),
-          ] else
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _key2Ctrl.text.trim().isEmpty
-                    ? null
-                    : _previewKey2,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent,
-                  foregroundColor: Colors.black,
-                ),
-                child: const Text('Предпросмотр'),
               ),
             ),
+            if (_key2Preview != null) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: _Key2Preview(workouts: _key2Preview!),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => setState(() => _key2Preview = null),
+                        style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.textSecondary,
+                            side: const BorderSide(color: AppColors.divider)),
+                        child: const Text('Отмена'),
+                      ),
+                    ),
+                    const Gap(10),
+                    Expanded(
+                      child: _GradientButton(
+                        onPressed: _key2Saving ? null : _saveKey2,
+                        loading: _key2Saving,
+                        label: 'Загрузить план',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                child: _GradientButton(
+                  onPressed:
+                      _key2Ctrl.text.trim().isEmpty ? null : _previewKey2,
+                  loading: false,
+                  label: 'Предпросмотр',
+                ),
+              ),
+          ]),
         ],
       ),
     );
   }
 }
+
+// ── iOS-style grouped container ───────────────────────────────
+
+class _IOSGroup extends StatelessWidget {
+  final List<Widget> children;
+  const _IOSGroup({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.divider, width: 0.5),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (int i = 0; i < children.length; i++) ...[
+              children[i],
+              if (i < children.length - 1)
+                const Divider(height: 1, thickness: 0.5,
+                    indent: 16, color: AppColors.divider),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Gradient accent button ────────────────────────────────────
+
+class _GradientButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+  final bool loading;
+  final String label;
+  const _GradientButton(
+      {required this.onPressed, required this.loading, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null && !loading;
+    return GestureDetector(
+      onTap: enabled ? onPressed : null,
+      child: AnimatedOpacity(
+        opacity: enabled ? 1.0 : 0.45,
+        duration: const Duration(milliseconds: 200),
+        child: Container(
+          height: 44,
+          decoration: BoxDecoration(
+            gradient: enabled
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF95D5B2), Color(0xFF52B788)],
+                  )
+                : null,
+            color: enabled ? null : AppColors.surfaceVariant,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Center(
+            child: loading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.black))
+                : Text(label,
+                    style: TextStyle(
+                      color: enabled ? Colors.black : AppColors.textMuted,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    )),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Section label ─────────────────────────────────────────────
 
 class _SectionLabel extends StatelessWidget {
   final String text;

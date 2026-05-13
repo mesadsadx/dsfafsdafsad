@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../app/theme.dart';
+import '../services/haptic_service.dart';
+import '../widgets/clipboard_import_sheet.dart';
+import '../widgets/glass_icon_button.dart';
+import '../widgets/gradient_scaffold.dart';
 import '../providers/workout_provider.dart';
 import '../widgets/heatmap_grid.dart';
 
@@ -23,7 +27,7 @@ class _HeatmapScreenState extends ConsumerState<HeatmapScreen> {
     final monthLabel = DateFormat('MMMM yyyy', 'ru').format(now);
     final label = monthLabel[0].toUpperCase() + monthLabel.substring(1);
 
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(
         title: Text(_yearView ? '${now.year}' : label),
         actions: [
@@ -34,12 +38,26 @@ class _HeatmapScreenState extends ConsumerState<HeatmapScreen> {
               onChanged: (v) => setState(() => _yearView = v),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () => context.push('/settings'),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GlassIconButton(
+              icon: Icons.download_rounded,
+              onPressed: () {
+                HapticService.medium();
+                showClipboardImportSheet(context, ref);
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GlassIconButton(
+              icon: Icons.settings_outlined,
+              onPressed: () => context.push('/settings'),
+            ),
           ),
         ],
       ),
+      backgroundColor: Colors.transparent,
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 280),
         child: _yearView
