@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,7 +14,7 @@ import '../services/key_codec.dart';
 Future<void> showClipboardImportSheet(BuildContext context, WidgetRef ref) {
   return showDialog(
     context: context,
-    barrierDismissible: true,
+    barrierDismissible: false,
     barrierColor: Colors.transparent,
     builder: (_) => _ImportDialog(ref: ref),
   );
@@ -38,14 +39,11 @@ class _ImportDialogState extends State<_ImportDialog> {
       final data = await Clipboard.getData(Clipboard.kTextPlain);
       final text = data?.text?.trim() ?? '';
       if (text.isEmpty) throw Exception('Буфер обмена пуст');
-
       final dict = KeyCodec.decodeKey1(text);
       final uid = widget.ref.read(authStateProvider).valueOrNull?.uid;
       if (uid == null) throw Exception('Не авторизован');
-
       await widget.ref.read(firestoreServiceProvider).saveKey1(uid, text, dict);
       widget.ref.invalidate(dictionaryProvider);
-
       await HapticService.importSuccess();
       setState(() {
         _busy = false;
@@ -68,23 +66,18 @@ class _ImportDialogState extends State<_ImportDialog> {
       final data = await Clipboard.getData(Clipboard.kTextPlain);
       final text = data?.text?.trim() ?? '';
       if (text.isEmpty) throw Exception('Буфер обмена пуст');
-
       final dict = widget.ref.read(dictionaryProvider).valueOrNull;
       if (dict == null || dict.isEmpty) throw Exception('Сначала настройте Key 1');
-
       final now = DateTime.now();
       final monday = now.subtract(Duration(days: now.weekday - 1));
       final weekStart = DateTime(monday.year, monday.month, monday.day);
       final workouts = KeyCodec.decodeKey2(text, dict, weekStart);
       if (workouts.isEmpty) throw Exception('Ключ не содержит тренировок');
-
       final uid = widget.ref.read(authStateProvider).valueOrNull?.uid;
       if (uid == null) throw Exception('Не авторизован');
-
       final service = widget.ref.read(firestoreServiceProvider);
       for (final w in workouts) await service.saveWorkout(uid, w);
       widget.ref.invalidate(monthWorkoutsProvider);
-
       await HapticService.importSuccess();
       setState(() {
         _busy = false;
@@ -108,19 +101,24 @@ class _ImportDialogState extends State<_ImportDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top + kToolbarHeight - 4;
+
     return Stack(
       children: [
-        // Full-screen blur backdrop
-        BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: Container(color: Colors.black.withOpacity(0.3)),
+        // Tappable blurred backdrop — closes on tap outside
+        GestureDetector(
+          onTap: () => Navigator.of(context).pop(),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+            child: Container(color: Colors.black.withOpacity(0.3)),
+          ),
         ),
-        // Menu card — top-right aligned under the buttons
+        // Menu card
         Positioned(
-          top: MediaQuery.of(context).padding.top + kToolbarHeight - 4,
+          top: topPad,
           right: 16,
-          child: Material(
-            color: Colors.transparent,
+          child: GestureDetector(
+            onTap: () {}, // absorb taps so card doesn't close itself
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: BackdropFilter(
@@ -140,33 +138,35 @@ class _ImportDialogState extends State<_ImportDialog> {
                     children: [
                       if (_status != null)
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                           child: Text(
                             _status!,
                             style: TextStyle(
                               fontSize: 12,
-                              color: _isError ? Colors.redAccent : AppColors.accent,
+                              color: _isError
+                                  ? CupertinoColors.systemRed
+                                  : AppColors.accent,
                             ),
                           ),
                         ),
                       _MenuItem(
-                        icon: Icons.vpn_key_rounded,
+                        icon: CupertinoIcons.key,
                         label: 'Импорт Key 1',
                         sublabel: 'Словарь упражнений',
                         loading: _busy,
                         onTap: _busy ? null : _importKey1,
                       ),
-                      _Divider(),
+                      const _Divider(),
                       _MenuItem(
-                        icon: Icons.calendar_month_rounded,
+                        icon: CupertinoIcons.calendar,
                         label: 'Импорт Key 2',
                         sublabel: 'План на неделю',
                         loading: _busy,
                         onTap: _busy ? null : _importKey2,
                       ),
-                      _Divider(),
+                      const _Divider(),
                       _MenuItem(
-                        icon: Icons.logout_rounded,
+                        icon: CupertinoIcons.square_arrow_left,
                         label: 'Выйти',
                         destructive: true,
                         onTap: _signOut,
@@ -202,9 +202,10 @@ class _MenuItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = destructive ? Colors.redAccent : AppColors.textPrimary;
-    return InkWell(
-      onTap: onTap,
+    final color = destructive ? CupertinoColors.systemRed : AppColors.textPrimary;
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
@@ -213,25 +214,27 @@ class _MenuItem extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label,
-                      style: TextStyle(
-                          color: color,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500)),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                   if (sublabel != null)
-                    Text(sublabel!,
-                        style: const TextStyle(
-                            color: AppColors.textMuted, fontSize: 12)),
+                    Text(
+                      sublabel!,
+                      style: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12,
+                      ),
+                    ),
                 ],
               ),
             ),
             if (loading)
-              const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                    strokeWidth: 1.5, color: AppColors.accent),
-              )
+              const CupertinoActivityIndicator()
             else
               Icon(icon, color: color, size: 18),
           ],
@@ -242,9 +245,15 @@ class _MenuItem extends StatelessWidget {
 }
 
 class _Divider extends StatelessWidget {
+  const _Divider();
+
   @override
   Widget build(BuildContext context) {
     return const Divider(
-        height: 1, thickness: 0.5, color: Color(0x33FFFFFF), indent: 16);
+      height: 1,
+      thickness: 0.5,
+      color: Color(0x33FFFFFF),
+      indent: 16,
+    );
   }
 }
