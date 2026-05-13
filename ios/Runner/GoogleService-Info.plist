@@ -2,18 +2,22 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CLIENT_ID</key>
+	<string>479670225209-1sb64ua4vr3a0ajorqikrkv15g14j4tt.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.479670225209-1sb64ua4vr3a0ajorqikrkv15g14j4tt</string>
 	<key>API_KEY</key>
-	<string>AIzaSyCh6bCqcv8zFiz-3lWFYYAyzQDubsMpFKM</string>
+	<string>AIzaSyBIzNu-eZ5L-n38fXDVG-TxpzKEmaSEz2M</string>
 	<key>GCM_SENDER_ID</key>
-	<string>42325668429</string>
+	<string>479670225209</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.personal.workoutTracker</string>
 	<key>PROJECT_ID</key>
-	<string>workout-48ef7</string>
+	<string>workout-69787</string>
 	<key>STORAGE_BUCKET</key>
-	<string>workout-48ef7.firebasestorage.app</string>
+	<string>workout-69787.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +29,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:42325668429:ios:1dec5792385fa24725a204</string>
+	<string>1:479670225209:ios:07652d94b0ab1aa95ec0e8</string>
 </dict>
 </plist>
