@@ -76,7 +76,8 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
         final int reps;
 
         if (last == null) {
-          weight = (config?.weights.isNotEmpty == true)
+          final isStrength = config?.isStrength ?? true;
+          weight = (isStrength && config?.weights.isNotEmpty == true)
               ? config!.weights.first
               : 0.0;
           final step = (config?.ladder.isNotEmpty == true)

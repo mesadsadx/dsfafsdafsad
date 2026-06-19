@@ -15,19 +15,21 @@ const _noProgressionCodes = {'BP'};
   Exercise last,
   ProgressionConfig? config,
 ) {
+  final isStrength = config?.isStrength ?? true;
+
   if (config != null && config.isRepeating) {
-    return (weight: last.weight, sets: last.sets, reps: last.reps, isProgressed: false);
+    return (weight: isStrength ? last.weight : 0.0, sets: last.sets, reps: last.reps, isProgressed: false);
   }
 
   if (config != null && config.ladder.isNotEmpty) {
     final allDone = last.completedSets.every((c) => c);
     if (!allDone) {
-      return (weight: last.weight, sets: last.sets, reps: last.reps, isProgressed: false);
+      return (weight: isStrength ? last.weight : 0.0, sets: last.sets, reps: last.reps, isProgressed: false);
     }
     final stepIdx =
         config.ladder.indexWhere((s) => s.$1 == last.sets && s.$2 == last.reps);
     if (stepIdx == -1) {
-      return (weight: last.weight, sets: last.sets, reps: last.reps, isProgressed: false);
+      return (weight: isStrength ? last.weight : 0.0, sets: last.sets, reps: last.reps, isProgressed: false);
     }
     final weightIdx =
         config.weights.indexWhere((w) => (w - last.weight).abs() < 0.01);
@@ -38,36 +40,37 @@ const _noProgressionCodes = {'BP'};
       nextWeightIdx = (weightIdx < 0 ? 0 : weightIdx) + 1;
       if (nextWeightIdx >= config.weights.length) {
         return (
-          weight: last.weight,
+          weight: isStrength ? last.weight : 0.0,
           sets: config.ladder.last.$1,
           reps: config.ladder.last.$2,
           isProgressed: false,
         );
       }
     }
-    final nextWeight =
-        config.weights.isNotEmpty ? config.weights[nextWeightIdx] : last.weight;
+    final nextWeight = isStrength
+        ? (config.weights.isNotEmpty ? config.weights[nextWeightIdx] : last.weight)
+        : 0.0;
     final step = config.ladder[nextStep];
     return (weight: nextWeight, sets: step.$1, reps: step.$2, isProgressed: true);
   }
 
   if (_noProgressionCodes.contains(last.code)) {
-    return (weight: last.weight, sets: last.sets, reps: last.reps, isProgressed: false);
+    return (weight: isStrength ? last.weight : 0.0, sets: last.sets, reps: last.reps, isProgressed: false);
   }
 
   final idx =
       _defaultLadder.indexWhere((s) => s.$1 == last.sets && s.$2 == last.reps);
   if (idx == -1) {
-    return (weight: last.weight, sets: last.sets, reps: last.reps, isProgressed: false);
+    return (weight: isStrength ? last.weight : 0.0, sets: last.sets, reps: last.reps, isProgressed: false);
   }
   final allDone = last.completedSets.every((c) => c);
   if (!allDone) {
-    return (weight: last.weight, sets: last.sets, reps: last.reps, isProgressed: false);
+    return (weight: isStrength ? last.weight : 0.0, sets: last.sets, reps: last.reps, isProgressed: false);
   }
   if (idx == _defaultLadder.length - 1) {
-    final nextWeight = last.weight > 0 ? last.weight + _defaultWeightStep : 0.0;
+    final nextWeight = (isStrength && last.weight > 0) ? last.weight + _defaultWeightStep : 0.0;
     return (weight: nextWeight, sets: 3, reps: 10, isProgressed: true);
   }
   final next = _defaultLadder[idx + 1];
-  return (weight: last.weight, sets: next.$1, reps: next.$2, isProgressed: true);
+  return (weight: isStrength ? last.weight : 0.0, sets: next.$1, reps: next.$2, isProgressed: true);
 }

@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 
 class NativeLiquidGlass extends StatelessWidget {
@@ -15,6 +17,23 @@ class NativeLiquidGlass extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return ClipRRect(
+        borderRadius: borderRadius,
+        child: Stack(
+          children: [
+            const Positioned.fill(
+              child: UiKitView(
+                viewType: 'liquid_glass_view',
+                layoutDirection: TextDirection.ltr,
+                creationParamsCodec: StandardMessageCodec(),
+              ),
+            ),
+            child,
+          ],
+        ),
+      );
+    }
     return ClipRRect(
       borderRadius: borderRadius,
       child: BackdropFilter(

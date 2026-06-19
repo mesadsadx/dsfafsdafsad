@@ -157,14 +157,17 @@ class _AddExerciseDialogState extends ConsumerState<AddExerciseDialog> {
                 onChanged: _onCodeSelected,
               ),
             const Gap(12),
-            TextField(
-              controller: _weightCtrl,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration:
-                  const InputDecoration(labelText: 'Вес (кг), 0 = без веса'),
-            ),
-            const Gap(8),
+            if (_selectedCode == null ||
+                (ref.watch(progressionConfigProvider(_selectedCode!))?.isStrength ?? true)) ...[
+              TextField(
+                controller: _weightCtrl,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration:
+                    const InputDecoration(labelText: 'Вес (кг), 0 = без веса'),
+              ),
+              const Gap(8),
+            ],
             TextField(
               controller: _setsCtrl,
               keyboardType: TextInputType.number,

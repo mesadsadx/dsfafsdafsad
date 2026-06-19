@@ -192,7 +192,8 @@ class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
 
   bool get _canSave {
     if (_isRepeating) return true;
-    return _parseWeights() != null && _parseLadder() != null;
+    if (_isStrength && _parseWeights() == null) return false;
+    return _parseLadder() != null;
   }
 
   void _save() {
@@ -201,7 +202,7 @@ class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
       isRepeating: _isRepeating,
       isStrength: _isStrength,
       group: _group,
-      weights: _isRepeating ? [] : (_parseWeights() ?? []),
+      weights: (_isRepeating || !_isStrength) ? [] : (_parseWeights() ?? []),
       ladder: _isRepeating ? [] : (_parseLadder() ?? []),
     ));
   }
@@ -317,16 +318,18 @@ class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
                         const SizedBox(height: 6),
                         _groupSelector(),
                         if (!_isRepeating) ...[
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _weightsCtrl,
-                            label: 'Веса (кг через запятую)',
-                            hint: '40, 42.5, 45, 47.5',
-                            error: _weightsCtrl.text.trim().isNotEmpty &&
-                                    _parseWeights() == null
-                                ? 'Неверный формат'
-                                : null,
-                          ),
+                          if (_isStrength) ...[
+                            const SizedBox(height: 12),
+                            _field(
+                              controller: _weightsCtrl,
+                              label: 'Веса (кг через запятую)',
+                              hint: '40, 42.5, 45, 47.5',
+                              error: _weightsCtrl.text.trim().isNotEmpty &&
+                                      _parseWeights() == null
+                                  ? 'Неверный формат'
+                                  : null,
+                            ),
+                          ],
                           const SizedBox(height: 8),
                           _field(
                             controller: _ladderCtrl,

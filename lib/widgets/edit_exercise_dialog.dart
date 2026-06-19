@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import '../app/theme.dart';
 import '../models/exercise.dart';
+import '../providers/progression_provider.dart';
 
-class EditExerciseDialog extends StatefulWidget {
+class EditExerciseDialog extends ConsumerStatefulWidget {
   final Exercise exercise;
 
   const EditExerciseDialog({super.key, required this.exercise});
 
   @override
-  State<EditExerciseDialog> createState() => _EditExerciseDialogState();
+  ConsumerState<EditExerciseDialog> createState() => _EditExerciseDialogState();
 }
 
-class _EditExerciseDialogState extends State<EditExerciseDialog> {
+class _EditExerciseDialogState extends ConsumerState<EditExerciseDialog> {
   late final TextEditingController _weightCtrl;
   late final TextEditingController _setsCtrl;
   late final TextEditingController _repsCtrl;
@@ -81,14 +83,16 @@ class _EditExerciseDialogState extends State<EditExerciseDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: _weightCtrl,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration:
-                  const InputDecoration(labelText: 'Вес (кг), 0 = без веса'),
-            ),
-            const Gap(8),
+            if (ref.watch(progressionConfigProvider(widget.exercise.code))?.isStrength ?? true) ...[
+              TextField(
+                controller: _weightCtrl,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration:
+                    const InputDecoration(labelText: 'Вес (кг), 0 = без веса'),
+              ),
+              const Gap(8),
+            ],
             TextField(
               controller: _setsCtrl,
               keyboardType: TextInputType.number,
