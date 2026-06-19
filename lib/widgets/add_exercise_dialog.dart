@@ -5,95 +5,11 @@ import 'package:gap/gap.dart';
 import '../app/theme.dart';
 import '../models/exercise.dart';
 import '../models/key_dictionary.dart';
-import '../models/progression_config.dart';
 import '../providers/progression_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/workout_provider.dart';
+import '../utils/progression.dart';
 
-// Progression ladder: (sets, reps). Applies to all exercises except _noProgressionCodes.
-const _ladder = [
-  (3, 10), (3, 12), (3, 15),
-  (4, 10), (4, 12), (4, 15),
-  (5, 10), (5, 12), (5, 15),
-  (6, 10), (6, 12), (6, 15),
-];
-
-// Weight-only progression exercises (sets/reps stay fixed per plan).
-const _noProgressionCodes = {'BP'};
-
-// Default weight increment when progression resets.
-const _weightStep = 2.5;
-
-({double weight, int sets, int reps, bool isProgressed}) _suggest(
-  Exercise last,
-  ProgressionConfig? config,
-) {
-  // ── Custom config: repeating ──────────────────────────────────────────────
-  if (config != null && config.isRepeating) {
-    return (weight: last.weight, sets: last.sets, reps: last.reps, isProgressed: false);
-  }
-
-  // ── Custom config: custom ladder ──────────────────────────────────────────
-  if (config != null && config.ladder.isNotEmpty) {
-    final allDone = last.completedSets.every((c) => c);
-    if (!allDone) {
-      return (weight: last.weight, sets: last.sets, reps: last.reps, isProgressed: false);
-    }
-
-    final stepIdx = config.ladder
-        .indexWhere((s) => s.$1 == last.sets && s.$2 == last.reps);
-    if (stepIdx == -1) {
-      return (weight: last.weight, sets: last.sets, reps: last.reps, isProgressed: false);
-    }
-
-    final weightIdx = config.weights
-        .indexWhere((w) => (w - last.weight).abs() < 0.01);
-
-    int nextStep = stepIdx + 1;
-    int nextWeightIdx = weightIdx < 0 ? 0 : weightIdx;
-
-    if (nextStep >= config.ladder.length) {
-      nextStep = 0;
-      nextWeightIdx = (weightIdx < 0 ? 0 : weightIdx) + 1;
-      if (nextWeightIdx >= config.weights.length) {
-        return (
-          weight: last.weight,
-          sets: config.ladder.last.$1,
-          reps: config.ladder.last.$2,
-          isProgressed: false,
-        );
-      }
-    }
-
-    final nextWeight =
-        config.weights.isNotEmpty ? config.weights[nextWeightIdx] : last.weight;
-    final step = config.ladder[nextStep];
-    return (weight: nextWeight, sets: step.$1, reps: step.$2, isProgressed: true);
-  }
-
-  // ── Fallback: hardcoded default ladder ────────────────────────────────────
-  if (_noProgressionCodes.contains(last.code)) {
-    return (weight: last.weight, sets: last.sets, reps: last.reps, isProgressed: false);
-  }
-
-  final idx = _ladder.indexWhere((s) => s.$1 == last.sets && s.$2 == last.reps);
-  if (idx == -1) {
-    return (weight: last.weight, sets: last.sets, reps: last.reps, isProgressed: false);
-  }
-
-  final allDone = last.completedSets.every((c) => c);
-  if (!allDone) {
-    return (weight: last.weight, sets: last.sets, reps: last.reps, isProgressed: false);
-  }
-
-  if (idx == _ladder.length - 1) {
-    final nextWeight = last.weight > 0 ? last.weight + _weightStep : 0.0;
-    return (weight: nextWeight, sets: 3, reps: 10, isProgressed: true);
-  }
-
-  final next = _ladder[idx + 1];
-  return (weight: last.weight, sets: next.$1, reps: next.$2, isProgressed: true);
-}
 
 String _formatWeight(double w) =>
     w == w.truncateToDouble() ? '${w.toInt()} кг' : '$w кг';
@@ -146,7 +62,7 @@ class _AddExerciseDialogState extends ConsumerState<AddExerciseDialog> {
 
   void _applyLast(Exercise last) {
     final config = ref.read(progressionConfigProvider(last.code));
-    final s = _suggest(last, config);
+    final s = suggestExercise(last, config);
 
     _weightCtrl.text = s.weight == s.weight.truncateToDouble()
         ? s.weight.toInt().toString()
