@@ -112,7 +112,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
   Future<void> _confirmClear(BuildContext context, WorkoutNotifier notifier) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
         title: const Text('Очистить день?'),
         content: const Text(
@@ -121,12 +121,12 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(ctx).pop(false),
             child: const Text('Отмена',
                 style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(ctx).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
