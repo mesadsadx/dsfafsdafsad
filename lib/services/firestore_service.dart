@@ -186,6 +186,20 @@ class FirestoreService {
     await _workoutRef(uid, date).delete();
   }
 
+  Stream<List<String>> watchGroups(String uid) {
+    return _settingsRef(uid).snapshots().map((snap) {
+      if (!snap.exists) return <String>[];
+      final data = snap.data() as Map<String, dynamic>?;
+      final raw = data?['groups'];
+      if (raw == null) return <String>[];
+      return List<String>.from(raw as List);
+    });
+  }
+
+  Future<void> saveGroups(String uid, List<String> groups) async {
+    await _settingsRef(uid).set({'groups': groups}, SetOptions(merge: true));
+  }
+
   Stream<List<String>> watchProgressionOrder(String uid) {
     return _settingsRef(uid).snapshots().map((snap) {
       if (!snap.exists) return <String>[];

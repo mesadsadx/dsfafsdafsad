@@ -10,9 +10,6 @@ import '../providers/settings_provider.dart';
 import '../widgets/gradient_scaffold.dart';
 
 // ── encode / decode ───────────────────────────────────────────────────────────
-// Format: base64url( JSON array of compact objects )
-// { c, r?, s?, g?, w?, l? }  — omit falsy / empty fields to keep it short
-// l elements are [sets, reps] arrays
 
 String _encodeConfigs(Map<String, ProgressionConfig> configs) {
   final list = configs.values.map((c) {
@@ -141,8 +138,8 @@ class _ProgressionScreenState extends ConsumerState<ProgressionScreen> {
           ElevatedButton(
             onPressed: () {
               Clipboard.setData(ClipboardData(text: key));
-              messenger.showSnackBar(
-                  const SnackBar(content: Text('Скопировано')));
+              messenger
+                  .showSnackBar(const SnackBar(content: Text('Скопировано')));
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accent,
@@ -176,7 +173,8 @@ class _ProgressionScreenState extends ConsumerState<ProgressionScreen> {
               children: [
                 const Text(
                   'Вставьте ключ, полученный от ИИ-модели или из экспорта.',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                  style:
+                      TextStyle(color: AppColors.textSecondary, fontSize: 13),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -188,8 +186,8 @@ class _ProgressionScreenState extends ConsumerState<ProgressionScreen> {
                       fontFamily: 'monospace'),
                   decoration: InputDecoration(
                     hintText: 'Вставьте ключ...',
-                    hintStyle: const TextStyle(
-                        color: AppColors.textMuted, fontSize: 12),
+                    hintStyle:
+                        const TextStyle(color: AppColors.textMuted, fontSize: 12),
                     errorText: error,
                   ),
                   onChanged: (_) => setDlg(() => error = null),
@@ -242,6 +240,7 @@ class _ProgressionScreenState extends ConsumerState<ProgressionScreen> {
     final dict = ref.watch(dictionaryProvider).valueOrNull;
     final configs = ref.watch(progressionsProvider).valueOrNull ?? {};
     final order = ref.watch(progressionOrderProvider).valueOrNull ?? [];
+    final groups = ref.watch(groupsProvider).valueOrNull ?? [];
     final uid = ref.read(authStateProvider).valueOrNull?.uid ?? '';
     final service = ref.read(firestoreServiceProvider);
     final bottomPad = MediaQuery.of(context).padding.bottom;
@@ -281,8 +280,7 @@ class _ProgressionScreenState extends ConsumerState<ProgressionScreen> {
           : Builder(builder: (context) {
               final entries = _applyOrder(dict.sortedEntries, order);
               return ReorderableListView.builder(
-                padding:
-                    EdgeInsets.fromLTRB(16, 16, 16, bottomPad + 80),
+                padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPad + 80),
                 buildDefaultDragHandles: false,
                 proxyDecorator: (child, _, animation) => Material(
                   elevation: 8,
@@ -304,6 +302,7 @@ class _ProgressionScreenState extends ConsumerState<ProgressionScreen> {
                       code: code,
                       name: entry.value,
                       config: configs[code],
+                      groups: groups,
                       isExpanded: _expandedCode == code,
                       onTap: () => setState(() {
                         _expandedCode =
@@ -313,9 +312,7 @@ class _ProgressionScreenState extends ConsumerState<ProgressionScreen> {
                         final messenger = ScaffoldMessenger.of(context);
                         try {
                           await service.saveProgression(uid, config);
-                          if (mounted) {
-                            setState(() => _expandedCode = null);
-                          }
+                          if (mounted) setState(() => _expandedCode = null);
                         } catch (_) {
                           messenger.showSnackBar(const SnackBar(
                               content: Text('Не удалось сохранить')));
@@ -325,13 +322,15 @@ class _ProgressionScreenState extends ConsumerState<ProgressionScreen> {
                         final messenger = ScaffoldMessenger.of(context);
                         try {
                           await service.deleteProgression(uid, code);
-                          if (mounted) {
-                            setState(() => _expandedCode = null);
-                          }
+                          if (mounted) setState(() => _expandedCode = null);
                         } catch (_) {
                           messenger.showSnackBar(const SnackBar(
                               content: Text('Не удалось сбросить')));
                         }
+                      },
+                      onAddGroup: (name) {
+                        if (uid.isEmpty) return;
+                        service.saveGroups(uid, [...groups, name]);
                       },
                       dragHandle: ReorderableDragStartListener(
                         index: i,
@@ -357,20 +356,24 @@ class _ExerciseProgressionCard extends StatefulWidget {
   final String code;
   final String name;
   final ProgressionConfig? config;
+  final List<String> groups;
   final bool isExpanded;
   final VoidCallback onTap;
   final void Function(ProgressionConfig) onSave;
   final VoidCallback onReset;
+  final void Function(String) onAddGroup;
   final Widget? dragHandle;
 
   const _ExerciseProgressionCard({
     required this.code,
     required this.name,
     required this.config,
+    required this.groups,
     required this.isExpanded,
     required this.onTap,
     required this.onSave,
     required this.onReset,
+    required this.onAddGroup,
     this.dragHandle,
   });
 
@@ -473,6 +476,45 @@ class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
       weights: (_isRepeating || !_isStrength) ? [] : (_parseWeights() ?? []),
       ladder: _isRepeating ? [] : (_parseLadder() ?? []),
     ));
+  }
+
+  Future<void> _promptAddGroup() async {
+    final ctrl = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Новая группа'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          style: const TextStyle(color: AppColors.textPrimary),
+          decoration: const InputDecoration(hintText: 'Например: Спина'),
+          onSubmitted: (v) => Navigator.of(ctx).pop(v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Отмена',
+                style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accent,
+              foregroundColor: Colors.black,
+            ),
+            child: const Text('Добавить'),
+          ),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (name != null && name.isNotEmpty && !widget.groups.contains(name)) {
+      widget.onAddGroup(name);
+      setState(() => _group = name);
+    }
   }
 
   @override
@@ -578,7 +620,7 @@ class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
                         ),
                         const SizedBox(height: 12),
                         const Text(
-                          'Группа',
+                          'Группа чередования',
                           style: TextStyle(
                               color: AppColors.textMuted, fontSize: 12),
                         ),
@@ -659,45 +701,76 @@ class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
   }
 
   Widget _groupSelector() {
-    const options = [null, 'A', 'B', 'C', 'D'];
     return Wrap(
       spacing: 6,
-      children: options.map((g) {
-        final label = g ?? 'None';
-        final selected = _group == g;
-        return GestureDetector(
-          onTap: () => setState(() => _group = g),
+      runSpacing: 6,
+      children: [
+        // None
+        _groupChip(null, 'Нет'),
+        // Existing groups
+        for (final g in widget.groups) _groupChip(g, g),
+        // Add button
+        GestureDetector(
+          onTap: _promptAddGroup,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: selected
-                  ? AppColors.accent.withValues(alpha: 0.18)
-                  : Colors.transparent,
+              color: Colors.transparent,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: selected
-                    ? AppColors.accent
-                    : AppColors.textMuted.withValues(alpha: 0.35),
-                width: selected ? 1.5 : 1,
+                color: AppColors.textMuted.withValues(alpha: 0.35),
               ),
             ),
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight:
-                    selected ? FontWeight.w600 : FontWeight.w400,
-                color: selected ? AppColors.accent : AppColors.textSecondary,
-              ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add, size: 14, color: AppColors.textMuted),
+                SizedBox(width: 3),
+                Text(
+                  'Новая',
+                  style: TextStyle(
+                      fontSize: 13, color: AppColors.textSecondary),
+                ),
+              ],
             ),
           ),
-        );
-      }).toList(),
+        ),
+      ],
     );
   }
 
-  Widget _checkRow(
-      String label, bool value, ValueChanged<bool?> onChange) {
+  Widget _groupChip(String? value, String label) {
+    final selected = _group == value;
+    return GestureDetector(
+      onTap: () => setState(() => _group = value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.accent.withValues(alpha: 0.18)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected
+                ? AppColors.accent
+                : AppColors.textMuted.withValues(alpha: 0.35),
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+            color: selected ? AppColors.accent : AppColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _checkRow(String label, bool value, ValueChanged<bool?> onChange) {
     return Row(
       children: [
         SizedBox(

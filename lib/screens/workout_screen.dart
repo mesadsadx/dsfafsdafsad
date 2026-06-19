@@ -46,18 +46,18 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     if (_loadingTemplate) return;
     setState(() => _loadingTemplate = true);
     try {
-      final session = ref.read(nextSessionProvider);
+      final nextGroup = ref.read(nextSessionProvider);
       final configs = ref.read(progressionsProvider).valueOrNull ?? {};
       final dict = ref.read(dictionaryProvider).valueOrNull;
       final uid = ref.read(authStateProvider).valueOrNull?.uid ?? '';
       final service = ref.read(firestoreServiceProvider);
       if (dict == null || dict.isEmpty || uid.isEmpty) return;
 
-      final Set<String?> groups =
-          session == 'AB' ? {null, 'A', 'B'} : {null, 'C', 'D'};
+      // null = no group (always included), nextGroup = current session group
+      final groupFilter = <String?>{null, nextGroup};
 
       final entries = dict.sortedEntries
-          .where((e) => groups.contains(configs[e.key]?.group))
+          .where((e) => groupFilter.contains(configs[e.key]?.group))
           .toList();
 
       final lastList = await Future.wait(
