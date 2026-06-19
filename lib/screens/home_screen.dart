@@ -9,6 +9,7 @@ class HomeScreen extends StatelessWidget {
 
   int _tabIndex(String location) {
     if (location.startsWith('/activity')) return 1;
+    if (location.startsWith('/progression')) return 2;
     return 0;
   }
 
@@ -23,6 +24,7 @@ class HomeScreen extends StatelessWidget {
         onTap: (i) {
           if (i == 0) context.go('/today');
           if (i == 1) context.go('/activity');
+          if (i == 2) context.go('/progression');
         },
       ),
     );

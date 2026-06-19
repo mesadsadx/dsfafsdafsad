@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../screens/home_screen.dart';
 import '../screens/heatmap_screen.dart';
 import '../screens/login_screen.dart';
+import '../screens/progression_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/workout_screen.dart';
 
@@ -70,6 +71,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/activity',
             pageBuilder: (_, __) =>
                 const NoTransitionPage(child: HeatmapScreen()),
+          ),
+          GoRoute(
+            path: '/progression',
+            pageBuilder: (_, __) =>
+                const NoTransitionPage(child: ProgressionScreen()),
           ),
           GoRoute(
             path: '/workout/:date',

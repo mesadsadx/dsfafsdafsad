@@ -17,8 +17,8 @@ class LiquidGlassNavBar extends StatelessWidget {
     final bottom = MediaQuery.of(context).padding.bottom;
     return Padding(
       padding: EdgeInsets.only(
-        left: 48,
-        right: 48,
+        left: 24,
+        right: 24,
         bottom: bottom + 16,
       ),
       child: DecoratedBox(
@@ -49,6 +49,13 @@ class LiquidGlassNavBar extends StatelessWidget {
                   label: 'Активность',
                   selected: currentIndex == 1,
                   onTap: () => onTap(1),
+                ),
+                _NavItem(
+                  icon: Icons.trending_up_outlined,
+                  activeIcon: Icons.trending_up,
+                  label: 'Прогрессия',
+                  selected: currentIndex == 2,
+                  onTap: () => onTap(2),
                 ),
               ],
             ),
@@ -81,7 +88,7 @@ class _NavItem extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
