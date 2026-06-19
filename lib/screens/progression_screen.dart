@@ -114,6 +114,7 @@ class _ExerciseProgressionCard extends StatefulWidget {
 class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
   late bool _isRepeating;
   late bool _isStrength;
+  late String? _group;
   late TextEditingController _weightsCtrl;
   late TextEditingController _ladderCtrl;
 
@@ -135,6 +136,7 @@ class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
   void _initControllers(ProgressionConfig? config) {
     _isRepeating = config?.isRepeating ?? false;
     _isStrength = config?.isStrength ?? false;
+    _group = config?.group;
     _weightsCtrl = TextEditingController(
       text: config?.weights
               .map((w) =>
@@ -198,6 +200,7 @@ class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
       exerciseCode: widget.code,
       isRepeating: _isRepeating,
       isStrength: _isStrength,
+      group: _group,
       weights: _isRepeating ? [] : (_parseWeights() ?? []),
       ladder: _isRepeating ? [] : (_parseLadder() ?? []),
     ));
@@ -262,6 +265,10 @@ class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
                     const SizedBox(width: 4),
                     _chip('custom', AppColors.accent),
                   ],
+                  if (widget.config?.group != null) ...[
+                    const SizedBox(width: 4),
+                    _chip(widget.config!.group!, AppColors.heatmap50),
+                  ],
                   const SizedBox(width: 8),
                   AnimatedRotation(
                     turns: widget.isExpanded ? 0.5 : 0,
@@ -299,6 +306,16 @@ class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
                           _isStrength,
                           (v) => setState(() => _isStrength = v ?? false),
                         ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Группа',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        _groupSelector(),
                         if (!_isRepeating) ...[
                           const SizedBox(height: 12),
                           _field(
@@ -368,6 +385,43 @@ class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
         style: TextStyle(
             fontSize: 11, color: color, fontWeight: FontWeight.w500),
       ),
+    );
+  }
+
+  Widget _groupSelector() {
+    const options = [null, 'A', 'B', 'C', 'D'];
+    return Wrap(
+      spacing: 6,
+      children: options.map((g) {
+        final label = g ?? 'None';
+        final selected = _group == g;
+        return GestureDetector(
+          onTap: () => setState(() => _group = g),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: selected
+                  ? AppColors.accent.withValues(alpha: 0.18)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: selected
+                    ? AppColors.accent
+                    : AppColors.textMuted.withValues(alpha: 0.35),
+                width: selected ? 1.5 : 1,
+              ),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                color: selected ? AppColors.accent : AppColors.textSecondary,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
