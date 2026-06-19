@@ -22,6 +22,12 @@ final lastWorkoutProvider = FutureProvider.autoDispose<Workout?>((ref) {
   return ref.read(firestoreServiceProvider).getLastWorkout(uid);
 });
 
+final progressionOrderProvider = StreamProvider<List<String>>((ref) {
+  final uid = ref.watch(authStateProvider).valueOrNull?.uid;
+  if (uid == null) return const Stream.empty();
+  return ref.read(firestoreServiceProvider).watchProgressionOrder(uid);
+});
+
 /// Returns 'AB' or 'CD' based on which groups the last workout contained.
 final nextSessionProvider = Provider.autoDispose<String>((ref) {
   final configs = ref.watch(progressionsProvider).valueOrNull ?? {};

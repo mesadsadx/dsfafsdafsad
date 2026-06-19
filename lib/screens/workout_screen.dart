@@ -109,6 +109,36 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     }
   }
 
+  Future<void> _confirmClear(BuildContext context, WorkoutNotifier notifier) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Очистить день?'),
+        content: const Text(
+          'Все упражнения за этот день будут удалены.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Отмена',
+                style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) notifier.clearWorkout();
+  }
+
   String _formatDate(DateTime d) {
     final now = DateTime.now();
     final isToday =
@@ -136,8 +166,13 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
               )
             : null,
         actions: [
+          if (workoutAsync.valueOrNull?.exercises.isNotEmpty == true)
+            GlassIconButton(
+              icon: Icons.delete_outline,
+              onPressed: () => _confirmClear(context, notifier),
+            ),
           Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.only(right: 8, left: 4),
             child: GlassIconButton(
               icon: Icons.settings_outlined,
               onPressed: () => context.push('/settings'),

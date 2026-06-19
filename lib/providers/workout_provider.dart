@@ -100,6 +100,17 @@ class WorkoutNotifier extends StateNotifier<AsyncValue<Workout?>> {
     }
   }
 
+  Future<void> clearWorkout() async {
+    if (_uid.isEmpty) return;
+    final previousState = state;
+    state = const AsyncValue.data(null);
+    try {
+      await _service.deleteWorkout(_uid, _date);
+    } catch (_) {
+      state = previousState;
+    }
+  }
+
   Future<void> addExercise(Exercise exercise) async {
     if (_uid.isEmpty) return;
     final workout = state.valueOrNull;

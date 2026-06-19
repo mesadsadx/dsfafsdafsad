@@ -182,6 +182,24 @@ class FirestoreService {
     });
   }
 
+  Future<void> deleteWorkout(String uid, String date) async {
+    await _workoutRef(uid, date).delete();
+  }
+
+  Stream<List<String>> watchProgressionOrder(String uid) {
+    return _settingsRef(uid).snapshots().map((snap) {
+      if (!snap.exists) return <String>[];
+      final data = snap.data() as Map<String, dynamic>?;
+      final raw = data?['progressionOrder'];
+      if (raw == null) return <String>[];
+      return List<String>.from(raw as List);
+    });
+  }
+
+  Future<void> saveProgressionOrder(String uid, List<String> order) async {
+    await _settingsRef(uid).set({'progressionOrder': order}, SetOptions(merge: true));
+  }
+
   /// Returns the most recent [Exercise] with [code] from the last [limit] workouts.
   Future<Exercise?> getLastExercise(String uid, String code, {int limit = 30}) async {
     final snaps = await _workoutsRef(uid)

@@ -1,12 +1,61 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gap/gap.dart';
 import '../app/theme.dart';
 import '../models/progression_config.dart';
 import '../providers/auth_provider.dart';
 import '../providers/progression_provider.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/gradient_scaffold.dart';
+
+// ── encode / decode ───────────────────────────────────────────────────────────
+// Format: base64url( JSON array of compact objects )
+// { c, r?, s?, g?, w?, l? }  — omit falsy / empty fields to keep it short
+// l elements are [sets, reps] arrays
+
+String _encodeConfigs(Map<String, ProgressionConfig> configs) {
+  final list = configs.values.map((c) {
+    final m = <String, dynamic>{'c': c.exerciseCode};
+    if (c.isRepeating) m['r'] = true;
+    if (c.isStrength) m['s'] = true;
+    if (c.group != null) m['g'] = c.group;
+    if (c.weights.isNotEmpty) m['w'] = c.weights;
+    if (c.ladder.isNotEmpty) {
+      m['l'] = c.ladder.map((s) => [s.$1, s.$2]).toList();
+    }
+    return m;
+  }).toList();
+  return base64Url.encode(utf8.encode(jsonEncode(list)));
+}
+
+List<ProgressionConfig>? _decodeConfigs(String raw) {
+  try {
+    final normalized = base64Url.normalize(raw.trim());
+    final decoded = utf8.decode(base64Url.decode(normalized));
+    final list = jsonDecode(decoded) as List;
+    return list.map((e) {
+      final m = e as Map<String, dynamic>;
+      return ProgressionConfig(
+        exerciseCode: m['c'] as String,
+        isRepeating: (m['r'] as bool?) ?? false,
+        isStrength: (m['s'] as bool?) ?? false,
+        group: m['g'] as String?,
+        weights: ((m['w'] as List?) ?? [])
+            .map((v) => (v as num).toDouble())
+            .toList(),
+        ladder: ((m['l'] as List?) ?? []).map((v) {
+          final pair = v as List;
+          return ((pair[0] as num).toInt(), (pair[1] as num).toInt());
+        }).toList(),
+      );
+    }).toList();
+  } catch (_) {
+    return null;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class ProgressionScreen extends ConsumerStatefulWidget {
   const ProgressionScreen({super.key});
@@ -18,16 +67,205 @@ class ProgressionScreen extends ConsumerStatefulWidget {
 class _ProgressionScreenState extends ConsumerState<ProgressionScreen> {
   String? _expandedCode;
 
+  List<MapEntry<String, String>> _applyOrder(
+    List<MapEntry<String, String>> all,
+    List<String> order,
+  ) {
+    if (order.isEmpty) return all;
+    final ordered = <MapEntry<String, String>>[];
+    final rest = List<MapEntry<String, String>>.from(all);
+    for (final code in order) {
+      final idx = rest.indexWhere((e) => e.key == code);
+      if (idx != -1) ordered.add(rest.removeAt(idx));
+    }
+    return [...ordered, ...rest];
+  }
+
+  void _onReorder(
+    int oldIndex,
+    int newIndex,
+    List<MapEntry<String, String>> entries,
+  ) {
+    if (newIndex > oldIndex) newIndex--;
+    final reordered = List<MapEntry<String, String>>.from(entries);
+    reordered.insert(newIndex, reordered.removeAt(oldIndex));
+    final uid = ref.read(authStateProvider).valueOrNull?.uid ?? '';
+    if (uid.isEmpty) return;
+    ref.read(firestoreServiceProvider).saveProgressionOrder(
+          uid,
+          reordered.map((e) => e.key).toList(),
+        );
+  }
+
+  Future<void> _showExportDialog(Map<String, ProgressionConfig> configs) async {
+    if (configs.isEmpty) return;
+    final key = _encodeConfigs(configs);
+    final messenger = ScaffoldMessenger.of(context);
+    await showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Экспорт прогрессии'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Скопируйте ключ. ИИ-модель может его изменить и вернуть обратно.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: SelectableText(
+                key,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Закрыть',
+                style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: key));
+              messenger.showSnackBar(
+                  const SnackBar(content: Text('Скопировано')));
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accent,
+              foregroundColor: Colors.black,
+            ),
+            child: const Text('Копировать'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showImportDialog() async {
+    final ctrl = TextEditingController();
+    final uid = ref.read(authStateProvider).valueOrNull?.uid ?? '';
+    final service = ref.read(firestoreServiceProvider);
+    if (uid.isEmpty) return;
+    final messenger = ScaffoldMessenger.of(context);
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) {
+          String? error;
+          return AlertDialog(
+            backgroundColor: AppColors.surface,
+            title: const Text('Импорт прогрессии'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Вставьте ключ, полученный от ИИ-модели или из экспорта.',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: ctrl,
+                  maxLines: 4,
+                  style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 12,
+                      fontFamily: 'monospace'),
+                  decoration: InputDecoration(
+                    hintText: 'Вставьте ключ...',
+                    hintStyle: const TextStyle(
+                        color: AppColors.textMuted, fontSize: 12),
+                    errorText: error,
+                  ),
+                  onChanged: (_) => setDlg(() => error = null),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Отмена',
+                    style: TextStyle(color: AppColors.textSecondary)),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final configs = _decodeConfigs(ctrl.text);
+                  if (configs == null) {
+                    setDlg(() => error = 'Неверный формат ключа');
+                    return;
+                  }
+                  try {
+                    for (final c in configs) {
+                      await service.saveProgression(uid, c);
+                    }
+                    if (ctx.mounted) {
+                      Navigator.of(ctx).pop();
+                      messenger.showSnackBar(SnackBar(
+                          content: Text(
+                              'Импортировано ${configs.length} упражнений')));
+                    }
+                  } catch (_) {
+                    setDlg(() => error = 'Ошибка при сохранении');
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: Colors.black,
+                ),
+                child: const Text('Применить'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    ctrl.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final dict = ref.watch(dictionaryProvider).valueOrNull;
     final configs = ref.watch(progressionsProvider).valueOrNull ?? {};
+    final order = ref.watch(progressionOrderProvider).valueOrNull ?? [];
     final uid = ref.read(authStateProvider).valueOrNull?.uid ?? '';
     final service = ref.read(firestoreServiceProvider);
     final bottomPad = MediaQuery.of(context).padding.bottom;
 
     return GradientScaffold(
-      appBar: AppBar(title: const Text('Прогрессия')),
+      appBar: AppBar(
+        title: const Text('Прогрессия'),
+        actions: [
+          if (configs.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.upload_outlined),
+              tooltip: 'Экспорт',
+              onPressed: () => _showExportDialog(configs),
+            ),
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: IconButton(
+              icon: const Icon(Icons.download_outlined),
+              tooltip: 'Импорт',
+              onPressed: _showImportDialog,
+            ),
+          ),
+        ],
+      ),
       body: (dict == null || dict.isEmpty)
           ? const Center(
               child: Padding(
@@ -35,51 +273,80 @@ class _ProgressionScreenState extends ConsumerState<ProgressionScreen> {
                 child: Text(
                   'Сначала настройте Key 1 в настройках',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textSecondary, height: 1.6),
+                  style:
+                      TextStyle(color: AppColors.textSecondary, height: 1.6),
                 ),
               ),
             )
-          : ListView.separated(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPad + 80),
-              itemCount: dict.sortedEntries.length,
-              separatorBuilder: (_, __) => const Gap(10),
-              itemBuilder: (_, i) {
-                final entry = dict.sortedEntries[i];
-                final code = entry.key;
-                return _ExerciseProgressionCard(
-                  key: ValueKey(code),
-                  code: code,
-                  name: entry.value,
-                  config: configs[code],
-                  isExpanded: _expandedCode == code,
-                  onTap: () => setState(() {
-                    _expandedCode = _expandedCode == code ? null : code;
-                  }),
-                  onSave: (config) async {
-                    final messenger = ScaffoldMessenger.of(context);
-                    try {
-                      await service.saveProgression(uid, config);
-                      if (mounted) setState(() => _expandedCode = null);
-                    } catch (_) {
-                      messenger.showSnackBar(
-                        const SnackBar(content: Text('Не удалось сохранить')),
-                      );
-                    }
-                  },
-                  onReset: () async {
-                    final messenger = ScaffoldMessenger.of(context);
-                    try {
-                      await service.deleteProgression(uid, code);
-                      if (mounted) setState(() => _expandedCode = null);
-                    } catch (_) {
-                      messenger.showSnackBar(
-                        const SnackBar(content: Text('Не удалось сбросить')),
-                      );
-                    }
-                  },
-                );
-              },
-            ),
+          : Builder(builder: (context) {
+              final entries = _applyOrder(dict.sortedEntries, order);
+              return ReorderableListView.builder(
+                padding:
+                    EdgeInsets.fromLTRB(16, 16, 16, bottomPad + 80),
+                buildDefaultDragHandles: false,
+                proxyDecorator: (child, _, animation) => Material(
+                  elevation: 8,
+                  color: Colors.transparent,
+                  shadowColor: Colors.black54,
+                  borderRadius: BorderRadius.circular(16),
+                  child: child,
+                ),
+                onReorder: (o, n) => _onReorder(o, n, entries),
+                itemCount: entries.length,
+                itemBuilder: (_, i) {
+                  final entry = entries[i];
+                  final code = entry.key;
+                  return Padding(
+                    key: ValueKey(code),
+                    padding: EdgeInsets.only(
+                        bottom: i < entries.length - 1 ? 10 : 0),
+                    child: _ExerciseProgressionCard(
+                      code: code,
+                      name: entry.value,
+                      config: configs[code],
+                      isExpanded: _expandedCode == code,
+                      onTap: () => setState(() {
+                        _expandedCode =
+                            _expandedCode == code ? null : code;
+                      }),
+                      onSave: (config) async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        try {
+                          await service.saveProgression(uid, config);
+                          if (mounted) {
+                            setState(() => _expandedCode = null);
+                          }
+                        } catch (_) {
+                          messenger.showSnackBar(const SnackBar(
+                              content: Text('Не удалось сохранить')));
+                        }
+                      },
+                      onReset: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        try {
+                          await service.deleteProgression(uid, code);
+                          if (mounted) {
+                            setState(() => _expandedCode = null);
+                          }
+                        } catch (_) {
+                          messenger.showSnackBar(const SnackBar(
+                              content: Text('Не удалось сбросить')));
+                        }
+                      },
+                      dragHandle: ReorderableDragStartListener(
+                        index: i,
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 14),
+                          child: Icon(Icons.drag_indicator_outlined,
+                              color: AppColors.textMuted, size: 18),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            }),
     );
   }
 }
@@ -94,9 +361,9 @@ class _ExerciseProgressionCard extends StatefulWidget {
   final VoidCallback onTap;
   final void Function(ProgressionConfig) onSave;
   final VoidCallback onReset;
+  final Widget? dragHandle;
 
   const _ExerciseProgressionCard({
-    super.key,
     required this.code,
     required this.name,
     required this.config,
@@ -104,6 +371,7 @@ class _ExerciseProgressionCard extends StatefulWidget {
     required this.onTap,
     required this.onSave,
     required this.onReset,
+    this.dragHandle,
   });
 
   @override
@@ -234,13 +502,13 @@ class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── Header ────────────────────────────────────────────────────────
+          // ── Header ──────────────────────────────────────────────────────
           GestureDetector(
             onTap: widget.onTap,
             behavior: HitTestBehavior.opaque,
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.only(
+                  left: 16, right: 8, top: 14, bottom: 14),
               child: Row(
                 children: [
                   Expanded(
@@ -261,7 +529,7 @@ class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
                     _chip('⚡', AppColors.heatmap75),
                   ],
                   if (hasCustom &&
-                      !(widget.config!.isRepeating) &&
+                      !widget.config!.isRepeating &&
                       widget.config!.ladder.isNotEmpty) ...[
                     const SizedBox(width: 4),
                     _chip('custom', AppColors.accent),
@@ -270,7 +538,7 @@ class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
                     const SizedBox(width: 4),
                     _chip(widget.config!.group!, AppColors.heatmap50),
                   ],
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   AnimatedRotation(
                     turns: widget.isExpanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 200),
@@ -280,11 +548,12 @@ class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
                       size: 20,
                     ),
                   ),
+                  if (widget.dragHandle != null) widget.dragHandle!,
                 ],
               ),
             ),
           ),
-          // ── Expandable body ───────────────────────────────────────────────
+          // ── Expandable body ─────────────────────────────────────────────
           AnimatedSize(
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeInOut,
@@ -303,7 +572,7 @@ class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
                         ),
                         const SizedBox(height: 4),
                         _checkRow(
-                          'Силовое',
+                          'Силовое (есть веса)',
                           _isStrength,
                           (v) => setState(() => _isStrength = v ?? false),
                         ),
@@ -311,9 +580,7 @@ class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
                         const Text(
                           'Группа',
                           style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 12,
-                          ),
+                              color: AppColors.textMuted, fontSize: 12),
                         ),
                         const SizedBox(height: 6),
                         _groupSelector(),
@@ -418,7 +685,8 @@ class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
               label,
               style: TextStyle(
                 fontSize: 13,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                fontWeight:
+                    selected ? FontWeight.w600 : FontWeight.w400,
                 color: selected ? AppColors.accent : AppColors.textSecondary,
               ),
             ),
@@ -428,7 +696,8 @@ class _ExerciseProgressionCardState extends State<_ExerciseProgressionCard> {
     );
   }
 
-  Widget _checkRow(String label, bool value, ValueChanged<bool?> onChange) {
+  Widget _checkRow(
+      String label, bool value, ValueChanged<bool?> onChange) {
     return Row(
       children: [
         SizedBox(
