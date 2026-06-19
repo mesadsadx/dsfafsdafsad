@@ -60,7 +60,7 @@ void main() {
     });
 
     test('completionRatio is 0 for empty exercises list', () {
-      final w = Workout(date: '2026-05-13', exercises: []);
+      const w = Workout(date: '2026-05-13', exercises: []);
       expect(w.completionRatio, 0);
     });
 

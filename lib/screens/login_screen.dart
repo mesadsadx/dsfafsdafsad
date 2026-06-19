@@ -51,7 +51,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      AppColors.accent.withOpacity(0.18),
+                      AppColors.accent.withValues(alpha: 0.18),
                       Colors.transparent,
                     ],
                   ),
@@ -75,12 +75,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color: AppColors.accent.withOpacity(0.25),
+                        color: AppColors.accent.withValues(alpha: 0.25),
                         width: 1,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.accent.withOpacity(0.15),
+                          color: AppColors.accent.withValues(alpha: 0.15),
                           blurRadius: 32,
                           spreadRadius: 4,
                         ),
@@ -181,10 +181,10 @@ class _GoogleButton extends StatelessWidget {
             child: Container(
               height: 54,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.07),
+                color: Colors.white.withValues(alpha: 0.07),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.12),
+                  color: Colors.white.withValues(alpha: 0.12),
                   width: 1,
                 ),
               ),

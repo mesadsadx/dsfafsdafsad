@@ -44,7 +44,7 @@ class _HeatmapScreenState extends ConsumerState<HeatmapScreen> {
               icon: Icons.download_rounded,
               onPressed: () {
                 HapticService.medium();
-                showClipboardImportSheet(context, ref);
+                showClipboardImportSheet(context);
               },
             ),
           ),

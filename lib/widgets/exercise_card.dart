@@ -8,12 +8,14 @@ class ExerciseCard extends StatelessWidget {
   final Exercise exercise;
   final int exerciseIndex;
   final void Function(int exerciseIndex, int setIndex) onSetToggle;
+  final void Function(int exerciseIndex)? onEdit;
 
   const ExerciseCard({
     super.key,
     required this.exercise,
     required this.exerciseIndex,
     required this.onSetToggle,
+    this.onEdit,
   });
 
   Color _accentColor(double ratio) {
@@ -31,7 +33,7 @@ class ExerciseCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
@@ -40,18 +42,18 @@ class ExerciseCard extends StatelessWidget {
           ],
         ),
         border: Border.all(
-          color: accent.withOpacity(ratio > 0 ? 0.25 : 0.08),
+          color: accent.withValues(alpha: ratio > 0 ? 0.25 : 0.08),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.25),
+            color: Colors.black.withValues(alpha: 0.25),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
           if (ratio == 1.0)
             BoxShadow(
-              color: AppColors.accent.withOpacity(0.08),
+              color: AppColors.accent.withValues(alpha: 0.08),
               blurRadius: 16,
               spreadRadius: 2,
             ),
@@ -63,7 +65,7 @@ class ExerciseCard extends StatelessWidget {
           begin: Alignment.topCenter,
           end: const Alignment(0, 0.25),
           colors: [
-            Colors.white.withOpacity(0.04),
+            Colors.white.withValues(alpha: 0.04),
             Colors.transparent,
           ],
         ),
@@ -104,7 +106,21 @@ class ExerciseCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        if (onEdit != null)
+                          GestureDetector(
+                            onTap: () => onEdit!(exerciseIndex),
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 6),
+                              child: Icon(
+                                Icons.edit_outlined,
+                                size: 15,
+                                color: AppColors.textMuted
+                                    .withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ),
+                        const SizedBox(width: 4),
                         _CompletionRing(
                           completed: exercise.completedCount,
                           total: exercise.sets,

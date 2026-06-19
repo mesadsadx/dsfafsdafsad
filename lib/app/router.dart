@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
@@ -8,15 +10,42 @@ import '../screens/login_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/workout_screen.dart';
 
+/// Owns the current user so redirect never races with authStateProvider.
+class _AuthRefreshNotifier extends ChangeNotifier {
+  User? _user;
+  bool _ready = false;
+
+  _AuthRefreshNotifier(Stream<User?> stream) {
+    _sub = stream.listen((user) {
+      _user = user;
+      _ready = true;
+      notifyListeners();
+    });
+  }
+
+  bool get ready => _ready;
+  bool get isLoggedIn => _user != null;
+
+  late final StreamSubscription<User?> _sub;
+
+  @override
+  void dispose() {
+    _sub.cancel();
+    super.dispose();
+  }
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
+  final authService = ref.read(authServiceProvider);
+  final notifier = _AuthRefreshNotifier(authService.authStateChanges);
+  ref.onDispose(notifier.dispose);
 
   return GoRouter(
     initialLocation: '/today',
+    refreshListenable: notifier,
     redirect: (context, state) {
-      final isLoading = authState.isLoading;
-      if (isLoading) return null;
-      final isLoggedIn = authState.valueOrNull != null;
+      if (!notifier.ready) return null;
+      final isLoggedIn = notifier.isLoggedIn;
       if (!isLoggedIn && state.matchedLocation != '/login') return '/login';
       if (isLoggedIn && state.matchedLocation == '/login') return '/today';
       return null;
@@ -39,7 +68,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/activity',
-            pageBuilder: (_, __) => const NoTransitionPage(child: HeatmapScreen()),
+            pageBuilder: (_, __) =>
+                const NoTransitionPage(child: HeatmapScreen()),
           ),
           GoRoute(
             path: '/workout/:date',

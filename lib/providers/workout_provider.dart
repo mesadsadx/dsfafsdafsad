@@ -5,6 +5,13 @@ import '../services/firestore_service.dart';
 import 'auth_provider.dart';
 import 'settings_provider.dart';
 
+final lastExerciseProvider =
+    FutureProvider.autoDispose.family<Exercise?, String>((ref, code) async {
+  final uid = ref.watch(authStateProvider).valueOrNull?.uid;
+  if (uid == null || uid.isEmpty) return null;
+  return ref.read(firestoreServiceProvider).getLastExercise(uid, code);
+});
+
 final monthWorkoutsProvider =
     StreamProvider.family<List<Workout>, ({int year, int month})>(
   (ref, params) {
@@ -27,6 +34,10 @@ class WorkoutNotifier extends StateNotifier<AsyncValue<Workout?>> {
   }
 
   Future<void> _load() async {
+    if (_uid.isEmpty) {
+      state = const AsyncValue.data(null);
+      return;
+    }
     state = const AsyncValue.loading();
     try {
       state = AsyncValue.data(await _service.loadWorkout(_uid, _date));
@@ -36,9 +47,11 @@ class WorkoutNotifier extends StateNotifier<AsyncValue<Workout?>> {
   }
 
   Future<void> toggleSet(int exerciseIndex, int setIndex) async {
+    if (_uid.isEmpty) return;
     final workout = state.valueOrNull;
     if (workout == null) return;
 
+    final previousState = state;
     final newCompleted =
         List<bool>.from(workout.exercises[exerciseIndex].completedSets);
     newCompleted[setIndex] = !newCompleted[setIndex];
@@ -48,15 +61,40 @@ class WorkoutNotifier extends StateNotifier<AsyncValue<Workout?>> {
         workout.exercises[exerciseIndex].copyWith(completedSets: newCompleted);
 
     state = AsyncValue.data(workout.copyWith(exercises: newExercises));
-    await _service.toggleSet(
-        _uid, _date, exerciseIndex, setIndex, newCompleted[setIndex]);
+    try {
+      await _service.toggleSet(
+          _uid, _date, exerciseIndex, setIndex, newCompleted[setIndex]);
+    } catch (_) {
+      state = previousState;
+    }
+  }
+
+  Future<void> updateExercise(int exerciseIndex, Exercise updated) async {
+    if (_uid.isEmpty) return;
+    final workout = state.valueOrNull;
+    if (workout == null) return;
+    final previousState = state;
+    final newExercises = List<Exercise>.from(workout.exercises);
+    newExercises[exerciseIndex] = updated;
+    state = AsyncValue.data(workout.copyWith(exercises: newExercises));
+    try {
+      await _service.updateExercise(_uid, _date, exerciseIndex, updated);
+    } catch (_) {
+      state = previousState;
+    }
   }
 
   Future<void> addExercise(Exercise exercise) async {
+    if (_uid.isEmpty) return;
     final workout = state.valueOrNull;
+    final previousState = state;
     final newExercises = <Exercise>[...(workout?.exercises ?? []), exercise];
     state = AsyncValue.data(Workout(date: _date, exercises: newExercises));
-    await _service.addExercise(_uid, _date, exercise);
+    try {
+      await _service.addExercise(_uid, _date, exercise);
+    } catch (_) {
+      state = previousState;
+    }
   }
 }
 

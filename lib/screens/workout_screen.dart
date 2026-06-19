@@ -4,10 +4,12 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../app/theme.dart';
+import '../widgets/glass_icon_button.dart';
 import '../widgets/gradient_scaffold.dart';
 import '../models/exercise.dart';
 import '../providers/workout_provider.dart';
 import '../widgets/add_exercise_dialog.dart';
+import '../widgets/edit_exercise_dialog.dart';
 import '../widgets/exercise_card.dart';
 import '../widgets/week_strip.dart';
 
@@ -27,7 +29,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
   void initState() {
     super.initState();
     _selectedDate = widget.date != null
-        ? DateTime.parse(widget.date!)
+        ? (DateTime.tryParse(widget.date!) ?? DateTime.now())
         : DateTime.now();
   }
 
@@ -59,9 +61,12 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
               )
             : null,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () => context.push('/settings'),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GlassIconButton(
+              icon: Icons.settings_outlined,
+              onPressed: () => context.push('/settings'),
+            ),
           ),
         ],
       ),
@@ -117,6 +122,18 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
                           exercise: workout.exercises[i],
                           exerciseIndex: i,
                           onSetToggle: notifier.toggleSet,
+                          onEdit: (idx) async {
+                            final updated =
+                                await showDialog<Exercise>(
+                              context: context,
+                              builder: (_) => EditExerciseDialog(
+                                exercise: workout.exercises[idx],
+                              ),
+                            );
+                            if (updated != null) {
+                              notifier.updateExercise(idx, updated);
+                            }
+                          },
                         ),
                       ),
                     ),

@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:intl/intl.dart';
 import '../app/theme.dart';
-import '../models/key_dictionary.dart';
 import '../models/workout.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/workout_provider.dart';
 import '../services/key_codec.dart';
+import '../widgets/native_liquid_glass.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -130,7 +130,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
         children: [
-          _SectionLabel('Аккаунт'),
+          const _SectionLabel('Аккаунт'),
           _IOSGroup(children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -170,7 +170,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ]),
           const Gap(28),
-          _SectionLabel('Key 1 — Словарь упражнений'),
+          const _SectionLabel('Key 1 — Словарь упражнений'),
           _IOSGroup(children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
@@ -210,7 +210,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ]),
           const Gap(28),
-          _SectionLabel('Key 2 — План на неделю'),
+          const _SectionLabel('Key 2 — План на неделю'),
           _IOSGroup(children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
@@ -278,14 +278,12 @@ class _IOSGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.divider, width: 0.5),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+    return NativeLiquidGlass(
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.divider, width: 0.5),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

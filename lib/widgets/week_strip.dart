@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../app/theme.dart';
+import 'native_liquid_glass.dart';
 
 class WeekStrip extends StatelessWidget {
   final DateTime selectedDate;
@@ -20,15 +21,16 @@ class WeekStrip extends StatelessWidget {
     final todayOnly = DateTime(now.year, now.month, now.day);
     final selOnly = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border(
-          bottom: BorderSide(color: AppColors.divider, width: 1),
+    return NativeLiquidGlass(
+      borderRadius: BorderRadius.zero,
+      child: Container(
+        decoration: const BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: AppColors.divider, width: 1),
+          ),
         ),
-      ),
-      padding: const EdgeInsets.fromLTRB(8, 10, 8, 12),
-      child: Row(
+        padding: const EdgeInsets.fromLTRB(8, 10, 8, 12),
+        child: Row(
         children: List.generate(7, (i) {
           final day = start.add(Duration(days: i));
           final dayOnly = DateTime(day.year, day.month, day.day);
@@ -54,7 +56,7 @@ class WeekStrip extends StatelessWidget {
                       color: isSelected
                           ? AppColors.accent
                           : isFuture
-                              ? AppColors.textMuted.withOpacity(0.4)
+                              ? AppColors.textMuted.withValues(alpha: 0.4)
                               : AppColors.textMuted,
                       fontWeight: FontWeight.w500,
                     ),
@@ -70,11 +72,11 @@ class WeekStrip extends StatelessWidget {
                       color: isSelected
                           ? AppColors.accent
                           : isToday
-                              ? AppColors.accent.withOpacity(0.12)
+                              ? AppColors.accent.withValues(alpha: 0.12)
                               : Colors.transparent,
                       border: isToday && !isSelected
                           ? Border.all(
-                              color: AppColors.accent.withOpacity(0.4), width: 1)
+                              color: AppColors.accent.withValues(alpha: 0.4), width: 1)
                           : null,
                     ),
                     child: Center(
@@ -88,7 +90,7 @@ class WeekStrip extends StatelessWidget {
                           color: isSelected
                               ? Colors.black
                               : isFuture
-                                  ? AppColors.textMuted.withOpacity(0.35)
+                                  ? AppColors.textMuted.withValues(alpha: 0.35)
                                   : AppColors.textPrimary,
                         ),
                       ),
@@ -100,6 +102,6 @@ class WeekStrip extends StatelessWidget {
           );
         }),
       ),
-    );
+    ));
   }
 }

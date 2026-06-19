@@ -120,13 +120,13 @@ class HeatmapGrid extends StatelessWidget {
                               color: AppColors.accent, width: 1.5)
                           : ratio != null
                               ? Border.all(
-                                  color: Colors.white.withOpacity(0.06),
+                                  color: Colors.white.withValues(alpha: 0.06),
                                   width: 0.5)
                               : null,
                       boxShadow: !compact && ratio != null && ratio > 0
                           ? [
                               BoxShadow(
-                                color: color.withOpacity(0.3),
+                                color: color.withValues(alpha: 0.3),
                                 blurRadius: 4,
                                 offset: const Offset(0, 2),
                               ),
@@ -141,8 +141,8 @@ class HeatmapGrid extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 9,
                                 color: ratio != null
-                                    ? Colors.white.withOpacity(0.5)
-                                    : AppColors.textMuted.withOpacity(0.3),
+                                    ? Colors.white.withValues(alpha: 0.5)
+                                    : AppColors.textMuted.withValues(alpha: 0.3),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),

@@ -4,31 +4,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app/theme.dart';
-import '../models/key_dictionary.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/workout_provider.dart';
 import '../services/haptic_service.dart';
 import '../services/key_codec.dart';
 
-Future<void> showClipboardImportSheet(BuildContext context, WidgetRef ref) {
+Future<void> showClipboardImportSheet(BuildContext context) {
   return showDialog(
     context: context,
     barrierDismissible: false,
     barrierColor: Colors.transparent,
-    builder: (_) => _ImportDialog(ref: ref),
+    builder: (_) => const _ImportDialog(),
   );
 }
 
-class _ImportDialog extends StatefulWidget {
-  final WidgetRef ref;
-  const _ImportDialog({required this.ref});
+class _ImportDialog extends ConsumerStatefulWidget {
+  const _ImportDialog();
 
   @override
-  State<_ImportDialog> createState() => _ImportDialogState();
+  ConsumerState<_ImportDialog> createState() => _ImportDialogState();
 }
 
-class _ImportDialogState extends State<_ImportDialog> {
+class _ImportDialogState extends ConsumerState<_ImportDialog> {
   bool _busy = false;
   String? _status;
   bool _isError = false;
@@ -40,10 +38,10 @@ class _ImportDialogState extends State<_ImportDialog> {
       final text = data?.text?.trim() ?? '';
       if (text.isEmpty) throw Exception('Буфер обмена пуст');
       final dict = KeyCodec.decodeKey1(text);
-      final uid = widget.ref.read(authStateProvider).valueOrNull?.uid;
+      final uid = ref.read(authStateProvider).valueOrNull?.uid;
       if (uid == null) throw Exception('Не авторизован');
-      await widget.ref.read(firestoreServiceProvider).saveKey1(uid, text, dict);
-      widget.ref.invalidate(dictionaryProvider);
+      await ref.read(firestoreServiceProvider).saveKey1(uid, text, dict);
+      ref.invalidate(dictionaryProvider);
       await HapticService.importSuccess();
       setState(() {
         _busy = false;
@@ -66,18 +64,20 @@ class _ImportDialogState extends State<_ImportDialog> {
       final data = await Clipboard.getData(Clipboard.kTextPlain);
       final text = data?.text?.trim() ?? '';
       if (text.isEmpty) throw Exception('Буфер обмена пуст');
-      final dict = widget.ref.read(dictionaryProvider).valueOrNull;
+      final dict = ref.read(dictionaryProvider).valueOrNull;
       if (dict == null || dict.isEmpty) throw Exception('Сначала настройте Key 1');
       final now = DateTime.now();
       final monday = now.subtract(Duration(days: now.weekday - 1));
       final weekStart = DateTime(monday.year, monday.month, monday.day);
       final workouts = KeyCodec.decodeKey2(text, dict, weekStart);
       if (workouts.isEmpty) throw Exception('Ключ не содержит тренировок');
-      final uid = widget.ref.read(authStateProvider).valueOrNull?.uid;
+      final uid = ref.read(authStateProvider).valueOrNull?.uid;
       if (uid == null) throw Exception('Не авторизован');
-      final service = widget.ref.read(firestoreServiceProvider);
-      for (final w in workouts) await service.saveWorkout(uid, w);
-      widget.ref.invalidate(monthWorkoutsProvider);
+      final service = ref.read(firestoreServiceProvider);
+      for (final w in workouts) {
+        await service.saveWorkout(uid, w);
+      }
+      ref.invalidate(monthWorkoutsProvider);
       await HapticService.importSuccess();
       setState(() {
         _busy = false;
@@ -96,7 +96,7 @@ class _ImportDialogState extends State<_ImportDialog> {
 
   void _signOut() {
     Navigator.of(context).pop();
-    widget.ref.read(authServiceProvider).signOut();
+    ref.read(authServiceProvider).signOut();
   }
 
   @override
@@ -110,7 +110,7 @@ class _ImportDialogState extends State<_ImportDialog> {
           onTap: () => Navigator.of(context).pop(),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-            child: Container(color: Colors.black.withOpacity(0.3)),
+            child: Container(color: Colors.black.withValues(alpha: 0.3)),
           ),
         ),
         // Menu card
@@ -129,7 +129,7 @@ class _ImportDialogState extends State<_ImportDialog> {
                     color: const Color(0xCC1C1C1E),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.1),
+                      color: Colors.white.withValues(alpha: 0.1),
                       width: 0.5,
                     ),
                   ),
@@ -150,7 +150,7 @@ class _ImportDialogState extends State<_ImportDialog> {
                           ),
                         ),
                       _MenuItem(
-                        icon: CupertinoIcons.key,
+                        icon: Icons.vpn_key_rounded,
                         label: 'Импорт Key 1',
                         sublabel: 'Словарь упражнений',
                         loading: _busy,

@@ -47,7 +47,7 @@ class GradientScaffold extends StatelessWidget {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      AppColors.accent.withOpacity(0.07),
+                      AppColors.accent.withValues(alpha: 0.07),
                       Colors.transparent,
                     ],
                   ),
