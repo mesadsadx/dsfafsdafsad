@@ -62,21 +62,9 @@ class LiquidGlassView: NSObject, FlutterPlatformView {
     container.isOpaque = false
     super.init()
 
-    let blurView: UIVisualEffectView
-
-    if #available(iOS 26.0, *) {
-      // iOS 26: real Liquid Glass lensing effect
-      let effect = UIGlassEffect()
-      blurView = UIVisualEffectView(effect: effect)
-      // Dark overlay so glass matches the app's dark theme (like Telegram dark)
-      let tint = UIView()
-      tint.backgroundColor = UIColor(white: 0.0, alpha: 0.40)
-      tint.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-      blurView.contentView.addSubview(tint)
-    } else {
-      // iOS 13–25: frosted dark material
-      blurView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterialDark))
-    }
+    let blurView = UIVisualEffectView(
+      effect: UIBlurEffect(style: .systemUltraThinMaterialDark)
+    )
 
     // Force dark appearance regardless of system setting
     blurView.overrideUserInterfaceStyle = .dark
