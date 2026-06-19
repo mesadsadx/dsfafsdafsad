@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/exercise.dart';
 import '../models/key_dictionary.dart';
+import '../models/progression_config.dart';
 import '../models/workout.dart';
 
 class FirestoreService {
@@ -17,6 +18,9 @@ class FirestoreService {
 
   CollectionReference _workoutsRef(String uid) =>
       _db.collection('users').doc(uid).collection('workouts');
+
+  CollectionReference _progressionsRef(String uid) =>
+      _db.collection('users').doc(uid).collection('progressions');
 
   Future<void> saveKey1(
     String uid,
@@ -118,6 +122,28 @@ class FirestoreService {
       exercises[exerciseIndex] = exercise.toMap();
       tx.update(ref, {'exercises': exercises});
     });
+  }
+
+  Stream<Map<String, ProgressionConfig>> watchProgressions(String uid) {
+    return _progressionsRef(uid).snapshots().map(
+          (snap) => {
+            for (final doc in snap.docs)
+              doc.id: ProgressionConfig.fromFirestore(
+                doc.id,
+                doc.data() as Map<String, dynamic>,
+              ),
+          },
+        );
+  }
+
+  Future<void> saveProgression(String uid, ProgressionConfig config) async {
+    await _progressionsRef(uid)
+        .doc(config.exerciseCode)
+        .set(config.toFirestore());
+  }
+
+  Future<void> deleteProgression(String uid, String exerciseCode) async {
+    await _progressionsRef(uid).doc(exerciseCode).delete();
   }
 
   /// Returns the most recent [Exercise] with [code] from the last [limit] workouts.
