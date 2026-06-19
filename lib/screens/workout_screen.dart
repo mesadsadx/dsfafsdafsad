@@ -46,18 +46,55 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     if (_loadingTemplate) return;
     setState(() => _loadingTemplate = true);
     try {
-      final nextGroup = ref.read(nextSessionProvider);
       final configs = ref.read(progressionsProvider).valueOrNull ?? {};
+      final allGroups = ref.read(groupsProvider).valueOrNull ?? [];
+      final order = ref.read(progressionOrderProvider).valueOrNull ?? [];
       final dict = ref.read(dictionaryProvider).valueOrNull;
       final uid = ref.read(authStateProvider).valueOrNull?.uid ?? '';
       final service = ref.read(firestoreServiceProvider);
       if (dict == null || dict.isEmpty || uid.isEmpty) return;
 
-      // null = no group (always included), nextGroup = current session group
-      final groupFilter = <String?>{null, nextGroup};
+      // Build a name lookup and progressionOrder-sorted code list.
+      final codeToName = Map.fromEntries(dict.sortedEntries);
+      final allCodes = codeToName.keys.toList();
+      final orderedCodes = [
+        ...order.where(allCodes.contains),
+        ...allCodes.where((c) => !order.contains(c)),
+      ];
 
-      final entries = dict.sortedEntries
-          .where((e) => groupFilter.contains(configs[e.key]?.group))
+      // Determine which exercises were in the last workout (for rotation).
+      final lastWorkout = await service.getLastWorkout(uid);
+      final lastCodes =
+          lastWorkout?.exercises.map((e) => e.code).toSet() ?? {};
+
+      // Always include no-group exercises.
+      final selected = <String>[
+        ...orderedCodes.where((c) => configs[c]?.group == null),
+      ];
+
+      // Each group: pick the next exercise in circular order.
+      for (final group in allGroups) {
+        final groupCodes =
+            orderedCodes.where((c) => configs[c]?.group == group).toList();
+        if (groupCodes.isEmpty) continue;
+
+        // Find the last exercise from this group that appeared in lastWorkout.
+        final lastInGroup = groupCodes.lastWhere(
+          (c) => lastCodes.contains(c),
+          orElse: () => '',
+        );
+
+        final nextIdx = lastInGroup.isEmpty
+            ? 0
+            : (groupCodes.indexOf(lastInGroup) + 1) % groupCodes.length;
+        selected.add(groupCodes[nextIdx]);
+      }
+
+      // Re-sort selected by progressionOrder.
+      final selectedSet = selected.toSet();
+      final entries = orderedCodes
+          .where(selectedSet.contains)
+          .map((c) => MapEntry(c, codeToName[c] ?? c))
           .toList();
 
       final lastList = await Future.wait(
@@ -153,7 +190,8 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     final notifier = ref.read(workoutNotifierProvider(_dateStr).notifier);
     final bottomPad = MediaQuery.of(context).padding.bottom;
     final dict = ref.watch(dictionaryProvider).valueOrNull;
-    ref.watch(nextSessionProvider);
+    ref.watch(groupsProvider);
+    ref.watch(progressionOrderProvider);
     ref.watch(lastWorkoutProvider);
 
     return GradientScaffold(
