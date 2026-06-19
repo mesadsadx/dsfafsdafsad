@@ -84,6 +84,22 @@ class WorkoutNotifier extends StateNotifier<AsyncValue<Workout?>> {
     }
   }
 
+  Future<void> addExercises(List<Exercise> exercises) async {
+    if (_uid.isEmpty || exercises.isEmpty) return;
+    final workout = state.valueOrNull;
+    final previousState = state;
+    final newExercises = <Exercise>[
+      ...(workout?.exercises ?? []),
+      ...exercises,
+    ];
+    state = AsyncValue.data(Workout(date: _date, exercises: newExercises));
+    try {
+      await _service.addExercisesBatch(_uid, _date, exercises);
+    } catch (_) {
+      state = previousState;
+    }
+  }
+
   Future<void> addExercise(Exercise exercise) async {
     if (_uid.isEmpty) return;
     final workout = state.valueOrNull;

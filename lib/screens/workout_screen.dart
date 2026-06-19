@@ -4,13 +4,17 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../app/theme.dart';
-import '../widgets/glass_icon_button.dart';
-import '../widgets/gradient_scaffold.dart';
 import '../models/exercise.dart';
+import '../providers/auth_provider.dart';
+import '../providers/progression_provider.dart';
+import '../providers/settings_provider.dart';
 import '../providers/workout_provider.dart';
+import '../utils/progression.dart';
 import '../widgets/add_exercise_dialog.dart';
 import '../widgets/edit_exercise_dialog.dart';
 import '../widgets/exercise_card.dart';
+import '../widgets/glass_icon_button.dart';
+import '../widgets/gradient_scaffold.dart';
 import '../widgets/week_strip.dart';
 
 class WorkoutScreen extends ConsumerStatefulWidget {
@@ -24,6 +28,7 @@ class WorkoutScreen extends ConsumerStatefulWidget {
 
 class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
   late DateTime _selectedDate;
+  bool _loadingTemplate = false;
 
   @override
   void initState() {
@@ -36,6 +41,72 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
   bool get _showWeekStrip => widget.date == null;
 
   String get _dateStr => DateFormat('yyyy-MM-dd').format(_selectedDate);
+
+  Future<void> _loadTemplate() async {
+    if (_loadingTemplate) return;
+    setState(() => _loadingTemplate = true);
+    try {
+      final session = ref.read(nextSessionProvider);
+      final configs = ref.read(progressionsProvider).valueOrNull ?? {};
+      final dict = ref.read(dictionaryProvider).valueOrNull;
+      final uid = ref.read(authStateProvider).valueOrNull?.uid ?? '';
+      final service = ref.read(firestoreServiceProvider);
+      if (dict == null || dict.isEmpty || uid.isEmpty) return;
+
+      final Set<String?> groups =
+          session == 'AB' ? {null, 'A', 'B'} : {null, 'C', 'D'};
+
+      final entries = dict.sortedEntries
+          .where((e) => groups.contains(configs[e.key]?.group))
+          .toList();
+
+      final lastList = await Future.wait(
+        entries.map((e) => service.getLastExercise(uid, e.key)),
+      );
+
+      final exercises = <Exercise>[];
+      for (var i = 0; i < entries.length; i++) {
+        final code = entries[i].key;
+        final name = entries[i].value;
+        final config = configs[code];
+        final last = lastList[i];
+
+        final double weight;
+        final int sets;
+        final int reps;
+
+        if (last == null) {
+          weight = (config?.weights.isNotEmpty == true)
+              ? config!.weights.first
+              : 0.0;
+          final step = (config?.ladder.isNotEmpty == true)
+              ? config!.ladder.first
+              : (3, 10);
+          sets = step.$1;
+          reps = step.$2;
+        } else {
+          final s = suggestExercise(last, config);
+          weight = s.weight;
+          sets = s.sets;
+          reps = s.reps;
+        }
+
+        exercises.add(Exercise(
+          code: code,
+          name: name,
+          weight: weight,
+          sets: sets,
+          reps: reps,
+        ));
+      }
+
+      await ref
+          .read(workoutNotifierProvider(_dateStr).notifier)
+          .addExercises(exercises);
+    } finally {
+      if (mounted) setState(() => _loadingTemplate = false);
+    }
+  }
 
   String _formatDate(DateTime d) {
     final now = DateTime.now();
@@ -50,6 +121,9 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
     final workoutAsync = ref.watch(workoutNotifierProvider(_dateStr));
     final notifier = ref.read(workoutNotifierProvider(_dateStr).notifier);
     final bottomPad = MediaQuery.of(context).padding.bottom;
+    final dict = ref.watch(dictionaryProvider).valueOrNull;
+    ref.watch(nextSessionProvider);
+    ref.watch(lastWorkoutProvider);
 
     return GradientScaffold(
       appBar: AppBar(
@@ -145,16 +219,63 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
         ],
       ),
       floatingActionButton: Padding(
-        padding: EdgeInsets.only(bottom: _showWeekStrip ? bottomPad + 72 : 0),
-        child: FloatingActionButton(
-          onPressed: () async {
-            final exercise = await showDialog<Exercise>(
-              context: context,
-              builder: (_) => const AddExerciseDialog(),
-            );
-            if (exercise != null) notifier.addExercise(exercise);
-          },
-          child: const Icon(Icons.add),
+        padding:
+            EdgeInsets.only(bottom: _showWeekStrip ? bottomPad + 72 : 0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (dict != null && !dict.isEmpty) ...[
+              FloatingActionButton.small(
+                heroTag: 'template',
+                tooltip: 'Загрузить тренировку',
+                onPressed: () {
+                  final hasExercises =
+                      workoutAsync.valueOrNull?.exercises.isNotEmpty == true;
+                  if (!hasExercises && !_loadingTemplate) _loadTemplate();
+                },
+                backgroundColor: () {
+                  final hasExercises =
+                      workoutAsync.valueOrNull?.exercises.isNotEmpty == true;
+                  return (hasExercises || _loadingTemplate)
+                      ? AppColors.surfaceVariant
+                      : AppColors.accent;
+                }(),
+                child: _loadingTemplate
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Icon(
+                        Icons.playlist_add_outlined,
+                        color: () {
+                          final hasExercises = workoutAsync
+                                  .valueOrNull?.exercises.isNotEmpty ==
+                              true;
+                          return (hasExercises || _loadingTemplate)
+                              ? AppColors.textMuted
+                              : Colors.black;
+                        }(),
+                      ),
+              ),
+              const SizedBox(height: 8),
+            ],
+            FloatingActionButton(
+              heroTag: 'add',
+              onPressed: () async {
+                final exercise = await showDialog<Exercise>(
+                  context: context,
+                  builder: (_) => const AddExerciseDialog(),
+                );
+                if (exercise != null) notifier.addExercise(exercise);
+              },
+              child: const Icon(Icons.add),
+            ),
+          ],
         ),
       ),
     );
