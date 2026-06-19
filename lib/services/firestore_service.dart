@@ -146,6 +146,42 @@ class FirestoreService {
     await _progressionsRef(uid).doc(exerciseCode).delete();
   }
 
+  /// Returns the most recent non-empty workout across all dates.
+  Future<Workout?> getLastWorkout(String uid) async {
+    final snaps = await _workoutsRef(uid)
+        .orderBy('date', descending: true)
+        .limit(10)
+        .get();
+    for (final doc in snaps.docs) {
+      final workout = Workout.fromMap(doc.data() as Map<String, dynamic>);
+      if (workout.exercises.isNotEmpty) return workout;
+    }
+    return null;
+  }
+
+  Future<void> addExercisesBatch(
+    String uid,
+    String date,
+    List<Exercise> exercises,
+  ) async {
+    if (exercises.isEmpty) return;
+    final ref = _workoutRef(uid, date);
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      if (snap.exists) {
+        final data = snap.data() as Map<String, dynamic>;
+        final existing = List<Map<String, dynamic>>.from(
+          (data['exercises'] as List)
+              .map((e) => Map<String, dynamic>.from(e as Map)),
+        );
+        existing.addAll(exercises.map((e) => e.toMap()));
+        tx.update(ref, {'exercises': existing});
+      } else {
+        tx.set(ref, Workout(date: date, exercises: exercises).toMap());
+      }
+    });
+  }
+
   /// Returns the most recent [Exercise] with [code] from the last [limit] workouts.
   Future<Exercise?> getLastExercise(String uid, String code, {int limit = 30}) async {
     final snaps = await _workoutsRef(uid)
