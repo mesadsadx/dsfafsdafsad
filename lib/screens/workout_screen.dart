@@ -67,9 +67,9 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
       final lastCodes =
           lastWorkout?.exercises.map((e) => e.code).toSet() ?? {};
 
-      // Always include no-group exercises.
+      // Include no-group exercises that have a progression config.
       final selected = <String>[
-        ...orderedCodes.where((c) => configs[c]?.group == null),
+        ...orderedCodes.where((c) => configs[c] != null && configs[c]!.group == null),
       ];
 
       // Each group: pick the next exercise in circular order.
