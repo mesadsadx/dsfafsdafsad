@@ -37,10 +37,15 @@ const _noProgressionCodes = {'BP'};
     int nextWeightIdx = weightIdx < 0 ? 0 : weightIdx;
     if (nextStep >= config.ladder.length) {
       nextStep = 0;
+      if (!isStrength) {
+        // No weights — just cycle the ladder from the top.
+        final step = config.ladder[nextStep];
+        return (weight: 0.0, sets: step.$1, reps: step.$2, isProgressed: true);
+      }
       nextWeightIdx = (weightIdx < 0 ? 0 : weightIdx) + 1;
       if (nextWeightIdx >= config.weights.length) {
         return (
-          weight: isStrength ? last.weight : 0.0,
+          weight: last.weight,
           sets: config.ladder.last.$1,
           reps: config.ladder.last.$2,
           isProgressed: false,
