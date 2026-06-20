@@ -16,6 +16,7 @@ import '../widgets/exercise_card.dart';
 import '../widgets/glass_icon_button.dart';
 import '../widgets/gradient_scaffold.dart';
 import '../widgets/week_strip.dart';
+import '../providers/health_provider.dart';
 
 class WorkoutScreen extends ConsumerStatefulWidget {
   final String? date;
@@ -299,6 +300,8 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            if (_showWeekStrip) _CaloriesChip(date: _selectedDate),
+            const Gap(8),
             if (dict != null && !dict.isEmpty) ...[
               FloatingActionButton.small(
                 heroTag: 'template',
@@ -352,6 +355,55 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CaloriesChip extends ConsumerWidget {
+  final DateTime date;
+  const _CaloriesChip({required this.date});
+
+  bool get _isToday {
+    final now = DateTime.now();
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!_isToday) return const SizedBox.shrink();
+    final kcalAsync = ref.watch(caloriesConsumedProvider);
+    return kcalAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (kcal) {
+        if (kcal == null) return const SizedBox.shrink();
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.surface.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.divider),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.local_fire_department,
+                  size: 14, color: Colors.orange),
+              const Gap(4),
+              Text(
+                '${kcal.round()} ккал',
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
