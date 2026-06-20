@@ -63,11 +63,9 @@ class LiquidGlassView: NSObject, FlutterPlatformView {
     super.init()
 
     let blurView = UIVisualEffectView(
-      effect: UIBlurEffect(style: .systemUltraThinMaterialDark)
+      effect: UIBlurEffect(style: .systemUltraThinMaterial)
     )
 
-    // Force dark appearance regardless of system setting
-    blurView.overrideUserInterfaceStyle = .dark
     blurView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     blurView.frame = container.bounds
     container.addSubview(blurView)

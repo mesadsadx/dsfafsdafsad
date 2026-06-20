@@ -39,7 +39,7 @@ class NativeLiquidGlass extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-          color: const Color(0x66000000),
+          color: const Color(0x28FFFFFF),
           child: child,
         ),
       ),
